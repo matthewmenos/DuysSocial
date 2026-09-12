@@ -1,0 +1,42 @@
+services:
+  # API Server (Express + Prisma)
+  - type: web
+    name: duys-api
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build -w server
+    startCommand: npm start -w server
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: API_PORT
+        value: 5000
+      - key: APP_URL
+        value: https://duys-client.onrender.com
+      - key: CLIENT_ORIGIN
+        value: https://duys-client.onrender.com
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  # Client (React + Vite static site)
+  - type: static
+    name: duys-client
+    runtime: static
+    buildCommand: npm install && npm run build -w client
+    publishDir: client/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://duys-api.onrender.com
