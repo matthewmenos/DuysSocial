@@ -1,0 +1,46 @@
+/* ─── Live & Spaces — discover page only ───
+ * Room styles → live-room.css (video) and space.css (audio)
+ */
+
+/* Discover page layout */
+.live-cta { display: flex; gap: 10px; padding: 12px 16px; }
+.live-cta .btn { flex: 1; }
+
+.live-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px; padding: 4px 16px 16px;
+}
+.live-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-align: center; padding: 16px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--bg-elevated);
+  transition: transform 0.15s, border-color 0.15s;
+}
+.live-card:hover { transform: translateY(-3px); border-color: var(--danger); }
+.live-thumb { position: relative; }
+.live-badge {
+  position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+  background: var(--danger); color: #fff; font-size: 10px; font-weight: 800;
+  padding: 1px 8px; border-radius: 999px; letter-spacing: .5px;
+}
+.live-card-info strong { display: block; font-size: 14px; }
+
+.space-list { padding: 0 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+.space-card {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.space-card:hover { border-color: var(--blue); }
+.space-card-info { flex: 1; display: flex; flex-direction: column; }
+
+/* Pulsing live/space dots (used on discover cards and story rings) */
+.space-dot, .live-dot {
+  width: 9px; height: 9px; border-radius: 999px; background: var(--danger);
+  display: inline-block; animation: pulse 1.4s infinite;
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(244,33,46,0.5); }
+  50%      { box-shadow: 0 0 0 5px rgba(244,33,46,0); }
+}
+.live-empty { padding: 8px 16px; }

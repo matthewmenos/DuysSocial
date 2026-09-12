@@ -1,0 +1,17 @@
+node_modules
+dist
+.env
+*.log
+.DS_Store
+server/uploads
+server/prisma/*.db
+server/prisma/*.db-journal
+server/test.db
+server/test-out.log
+client/dist
+face-worker/__pycache__
+.venv
+scripts
+react_node_rewrite_3a984fe1.plan.md
+TODO.md
+test

@@ -1,0 +1,675 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     Int       @id @default(autoincrement())
+  googleId               String?   @unique @map("google_id")
+  email                  String    @unique
+  passwordHash           String    @default("") @map("password_hash")
+  username               String    @unique
+  displayName            String    @map("display_name")
+  bio                    String    @default("")
+  location               String    @default("")
+  website                String    @default("")
+  avatarUrl              String    @default("") @map("avatar_url")
+  bannerUrl              String    @default("") @map("banner_url")
+  points                 Int       @default(0)
+  pointsBalance          Int       @default(0) @map("points_balance") // Alias for points — same column, explicit name
+  duysTokens             Float     @default(0) @map("duys_tokens")
+  balanceCents           Int       @default(0) @map("balance_cents")
+  verifiedBadge          String    @default("") @map("verified_badge")
+  verifiedBadgeExpires   String    @default("") @map("verified_badge_expires")
+  isAdmin                Boolean   @default(false) @map("is_admin")
+  isBanned               Boolean   @default(false) @map("is_banned")
+  twofaSecret            String    @default("") @map("twofa_secret")
+  twofaEnabled           Boolean   @default(false) @map("twofa_enabled")
+  referredById           Int?      @map("referred_by")
+  walletAddress          String    @default("") @unique @map("wallet_address")
+  walletAddressHash      String?   @unique @map("wallet_address_hash") // sha256 hash of walletAddress for unique index without exposing address
+  ringtoneUrl            String    @default("") @map("ringtone_url")
+  theme                  String    @default("dark")
+  lastSeen               DateTime? @map("last_seen")
+  profileSlug            String    @default("") @map("profile_slug")
+  pinnedPostId           Int?      @map("pinned_post_id")
+  whoCanDm               String    @default("everyone") @map("who_can_dm")
+  showOnline             Boolean   @default(true) @map("show_online")
+  showLastSeen           Boolean   @default(true) @map("show_last_seen")
+  selfVerifiedChannelId  Int?      @map("self_verified_channel_id")
+  selfVerifiedGroupId    Int?      @map("self_verified_group_id")
+  faceVerifyStatus       String    @default("unverified") @map("face_verify_status")
+  faceIdPhotoKey         String    @default("") @map("face_id_photo_key")
+  faceSelfieKey          String    @default("") @map("face_selfie_key")
+  faceConfidence         Float     @default(0) @map("face_confidence")
+  faceNationality        String    @default("") @map("face_nationality")
+  faceIdType             String    @default("") @map("face_id_type")
+  faceOrgDocKey          String    @default("") @map("face_org_doc_key")
+  createdAt              DateTime  @default(now()) @map("created_at")
+
+  referredBy             User?     @relation("Referrals", fields: [referredById], references: [id])
+  referees               User[]    @relation("Referrals")
+  following              Follow[]  @relation("Follower")
+  followers              Follow[]  @relation("Followee")
+  blocking               Block[]   @relation("Blocker")
+  blockedBy              Block[]   @relation("Blocked")
+
+  @@map("users")
+}
+
+model Follow {
+  followerId Int      @map("follower_id")
+  followeeId Int      @map("followee_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  follower   User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee   User     @relation("Followee", fields: [followeeId], references: [id], onDelete: Cascade)
+  @@id([followerId, followeeId])
+  @@index([followeeId])
+  @@map("follows")
+}
+
+model Block {
+  blockerId Int      @map("blocker_id")
+  blockedId Int      @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  @@id([blockerId, blockedId])
+  @@map("blocks")
+}
+
+model Post {
+  id           Int       @id @default(autoincrement())
+  authorId     Int       @map("author_id")
+  kind         String    @default("text")
+  body         String    @default("")
+  title        String    @default("")
+  channelId    Int?      @map("channel_id")
+  repostOf     Int?      @map("repost_of")
+  quoteOf      Int?      @map("quote_of")
+  isSponsored  Boolean   @default(false) @map("is_sponsored")
+  boostUntil   DateTime? @map("boost_until")
+  cta          String    @default("")
+  landingUrl   String    @default("") @map("landing_url")
+  isExclusive  Boolean   @default(false) @map("is_exclusive")
+  unlockPrice  Float     @default(0) @map("unlock_price")
+  scheduledAt  DateTime? @map("scheduled_at")
+  likeCount    Int       @default(0) @map("like_count")
+  commentCount Int       @default(0) @map("comment_count")
+  repostCount  Int       @default(0) @map("repost_count")
+  quoteCount   Int       @default(0) @map("quote_count")
+  viewCount    Int       @default(0) @map("view_count")
+  shareCount   Int       @default(0) @map("share_count")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([authorId, createdAt])
+  @@index([createdAt])
+  @@map("posts")
+}
+
+model PostUnlock {
+  userId     Int      @map("user_id")
+  postId     Int      @map("post_id")
+  paid       Float    @default(0)
+  unlockedAt DateTime @default(now()) @map("unlocked_at")
+  @@id([userId, postId])
+  @@map("post_unlocks")
+}
+
+model PostView {
+  userId   Int      @map("user_id")
+  postId   Int      @map("post_id")
+  viewedAt DateTime @default(now()) @map("viewed_at")
+  @@id([userId, postId])
+  @@index([postId])
+  @@map("post_views")
+}
+
+model Media {
+  id        Int      @id @default(autoincrement())
+  postId    Int?     @map("post_id")
+  ownerId   Int      @map("owner_id")
+  key       String
+  url       String
+  mime      String   @default("")
+  kind      String   @default("image")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("media")
+}
+
+model LinkPreview {
+  postId      Int      @id @map("post_id")
+  url         String
+  title       String   @default("")
+  description String   @default("")
+  image       String   @default("")
+  domain      String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+  @@map("link_previews")
+}
+
+model Hashtag {
+  tag       String   @id
+  postCount Int      @default(0) @map("post_count")
+  lastUsed  DateTime @default(now()) @map("last_used")
+  @@map("hashtags")
+}
+
+model PollOption {
+  id      Int    @id @default(autoincrement())
+  postId  Int    @map("post_id")
+  label   String
+  votes   Int    @default(0)
+  @@map("poll_options")
+}
+
+model PollVote {
+  postId   Int @map("post_id")
+  userId   Int @map("user_id")
+  optionId Int @map("option_id")
+  @@id([postId, userId])
+  @@map("poll_votes")
+}
+
+model Like {
+  postId    Int      @map("post_id")
+  userId    Int      @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@id([postId, userId])
+  @@map("likes")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  postId    Int      @map("post_id")
+  authorId  Int      @map("author_id")
+  body      String
+  likeCount Int      @default(0) @map("like_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("comments")
+}
+
+model CommentLike {
+  commentId Int      @map("comment_id")
+  userId    Int      @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@id([commentId, userId])
+  @@map("comment_likes")
+}
+
+model Channel {
+  id                  Int      @id @default(autoincrement())
+  ownerId             Int      @map("owner_id")
+  name                String
+  handle              String   @unique
+  description         String   @default("")
+  avatarUrl           String   @default("") @map("avatar_url")
+  bannerUrl           String   @default("") @map("banner_url")
+  inviteToken         String   @default("") @map("invite_token")
+  isPrivate           Boolean  @default(false) @map("is_private")
+  pinnedPostId        Int?     @map("pinned_post_id")
+  subscriberCount     Int      @default(0) @map("subscriber_count")
+  verifiedBadge       String   @default("") @map("verified_badge")
+  verificationStatus  String   @default("none") @map("verification_status")
+  verificationNote    String   @default("") @map("verification_note")
+  selfVerified        Boolean  @default(false) @map("self_verified")
+  createdAt           DateTime @default(now()) @map("created_at")
+  @@map("channels")
+}
+
+model ChannelSubscription {
+  channelId      Int      @map("channel_id")
+  userId         Int      @map("user_id")
+  role           String   @default("member")
+  isMuted        Boolean  @default(false) @map("is_muted")
+  lastReadPostId Int      @default(0) @map("last_read_post_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  @@id([channelId, userId])
+  @@index([channelId])
+  @@map("channel_subscriptions")
+}
+
+model ChannelPostReaction {
+  postId    Int      @map("post_id")
+  userId    Int      @map("user_id")
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@id([postId, userId])
+  @@map("channel_post_reactions")
+}
+
+model ChannelVerifApp {
+  id          Int       @id @default(autoincrement())
+  channelId   Int       @map("channel_id")
+  applicantId Int       @map("applicant_id")
+  message     String    @default("")
+  status      String    @default("pending")
+  adminNote   String    @default("") @map("admin_note")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  reviewedAt  DateTime? @map("reviewed_at")
+  @@index([status])
+  @@map("channel_verif_apps")
+}
+
+model Conversation {
+  id                 Int      @id @default(autoincrement())
+  isGroup            Boolean  @default(false) @map("is_group")
+  title              String   @default("")
+  avatarUrl          String   @default("") @map("avatar_url")
+  description        String   @default("")
+  handle             String?  @unique
+  inviteToken        String   @default("") @map("invite_token")
+  isPrivate          Boolean  @default(false) @map("is_private")
+  createdBy          Int      @map("created_by")
+  verifiedBadge      String   @default("") @map("verified_badge")
+  verificationStatus String   @default("none") @map("verification_status")
+  verificationNote   String   @default("") @map("verification_note")
+  selfVerified       Boolean  @default(false) @map("self_verified")
+  createdAt          DateTime @default(now()) @map("created_at")
+  @@map("conversations")
+}
+
+model ConversationMember {
+  conversationId    Int      @map("conversation_id")
+  userId            Int      @map("user_id")
+  role              String   @default("member")
+  lastReadMessageId Int      @default(0) @map("last_read_message_id")
+  clearedUpto       Int      @default(0) @map("cleared_upto")
+  isMuted           Boolean  @default(false) @map("is_muted")
+  @@id([conversationId, userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             Int      @id @default(autoincrement())
+  conversationId Int      @map("conversation_id")
+  senderId       Int      @map("sender_id")
+  body           String   @default("")
+  mediaUrl       String   @default("") @map("media_url")
+  mediaKind      String   @default("") @map("media_kind")
+  mediaKey       String   @default("") @map("media_key")
+  mediaMime      String   @default("") @map("media_mime")
+  viewOnce       Boolean  @default(false) @map("view_once")
+  viewed         Boolean  @default(false)
+  replyTo        Int?     @map("reply_to")
+  forwarded      Boolean  @default(false)
+  edited         Boolean  @default(false)
+  pinned         Boolean  @default(false)
+  deleted        Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+  @@index([conversationId, id])
+  @@map("messages")
+}
+
+model MessageReaction {
+  messageId Int      @map("message_id")
+  userId    Int      @map("user_id")
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@id([messageId, userId])
+  @@map("message_reactions")
+}
+
+model GroupVerifApp {
+  id          Int       @id @default(autoincrement())
+  groupId     Int       @map("group_id")
+  applicantId Int       @map("applicant_id")
+  message     String    @default("")
+  status      String    @default("pending")
+  adminNote   String    @default("") @map("admin_note")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  reviewedAt  DateTime? @map("reviewed_at")
+  @@index([status])
+  @@map("group_verif_apps")
+}
+
+model Story {
+  id        Int      @id @default(autoincrement())
+  authorId  Int      @map("author_id")
+  mediaKey  String   @default("") @map("media_key")
+  mediaUrl  String   @map("media_url")
+  mediaKind String   @default("image") @map("media_kind")
+  caption   String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+  @@index([expiresAt])
+  @@map("stories")
+}
+
+model StoryView {
+  storyId   Int      @map("story_id")
+  userId    Int      @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@id([storyId, userId])
+  @@map("story_views")
+}
+
+model StoryReaction {
+  storyId   Int      @map("story_id")
+  userId    Int      @map("user_id")
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@id([storyId, userId])
+  @@map("story_reactions")
+}
+
+model Room {
+  id         Int       @id @default(autoincrement())
+  hostId     Int       @map("host_id")
+  kind       String    @default("video")
+  title      String    @default("")
+  status     String    @default("live")
+  viewerPeak Int       @default(0) @map("viewer_peak")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  endedAt    DateTime? @map("ended_at")
+  @@index([status, id])
+  @@map("rooms")
+}
+
+model RoomMessage {
+  id        Int      @id @default(autoincrement())
+  roomId    Int      @map("room_id")
+  userId    Int      @map("user_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([roomId, id])
+  @@map("room_messages")
+}
+
+model PointLedger {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  delta     Int
+  reason    String
+  ref       String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("point_ledger")
+}
+
+model WalletTx {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  kind           String
+  amountCents    Int      @map("amount_cents")
+  currency       String   @default("USD")
+  status         String   @default("completed")
+  txHash         String   @default("") @map("tx_hash")
+  counterpartyId Int?     @map("counterparty_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  @@map("wallet_tx")
+}
+
+model Tip {
+  id        Int      @id @default(autoincrement())
+  fromId    Int      @map("from_id")
+  toId      Int      @map("to_id")
+  postId    Int?     @map("post_id")
+  currency  String
+  amount    Int
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("tips")
+}
+
+model VerificationRequest {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  badge         String
+  paymentMethod String   @map("payment_method")
+  amount        Int
+  reason        String   @default("")
+  status        String   @default("pending")
+  reviewedBy    Int?     @map("reviewed_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  @@map("verification_requests")
+}
+
+model BadgeRenewal {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  badge     String
+  amount    Float
+  status    String   @default("ok")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([userId, createdAt])
+  @@map("badge_renewals")
+}
+
+model Boost {
+  id            Int      @id @default(autoincrement())
+  postId        Int      @map("post_id")
+  userId        Int      @map("user_id")
+  days          Int
+  paymentMethod String   @map("payment_method")
+  amount        Int
+  geo           String   @default("")
+  ageMin        Int      @default(18) @map("age_min")
+  ageMax        Int      @default(65) @map("age_max")
+  landingUrl    String   @default("") @map("landing_url")
+  cta           String   @default("")
+  audience      String   @default("")
+  startsAt      DateTime @default(now()) @map("starts_at")
+  endsAt        DateTime @map("ends_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  @@map("boosts")
+}
+
+model AdView {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  reward    Int
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("ad_views")
+}
+
+model HypelabEvent {
+  eventId   String   @id @map("event_id")
+  userId    Int      @map("user_id")
+  reward    Int
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("hypelab_events")
+}
+
+model Referral {
+  id         Int      @id @default(autoincrement())
+  referrerId Int      @map("referrer_id")
+  refereeId  Int      @unique @map("referee_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  @@map("referrals")
+}
+
+model Notification {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  actorId    Int?     @map("actor_id")
+  kind       String
+  entityType String   @default("") @map("entity_type")
+  entityId   Int?
+  text       String
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  endpoint  String
+  p256dh    String   @default("")
+  auth      String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("push_subscriptions")
+}
+
+model AppConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("app_config")
+}
+
+model Report {
+  id             Int      @id @default(autoincrement())
+  reporterId     Int      @map("reporter_id")
+  postId         Int?     @map("post_id")
+  reportedUserId Int?     @map("reported_user_id")
+  reason         String   @default("")
+  status         String   @default("open")
+  reviewedBy     Int?     @map("reviewed_by")
+  weight         Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at")
+  @@map("reports")
+}
+
+model SubscriptionTier {
+  id        Int      @id @default(autoincrement())
+  name      String   @default("")
+  priceDuys Float    @default(0) @map("price_duys")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("subscription_tiers")
+}
+
+model CreatorSubscription {
+  userId    Int      @id @map("user_id")
+  tierId    Int      @map("tier_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("creator_subscriptions")
+}
+
+model UserSubscription {
+  id           Int      @id @default(autoincrement())
+  subscriberId Int      @map("subscriber_id")
+  creatorId    Int      @map("creator_id")
+  tierId       Int      @map("tier_id")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  @@unique([subscriberId, creatorId])
+  @@map("user_subscriptions")
+}
+
+model ShopListing {
+  id          Int      @id @default(autoincrement())
+  sellerId    Int      @map("seller_id")
+  title       String   @default("")
+  description String   @default("")
+  fileKey     String   @default("") @map("file_key")
+  fileUrl     String   @default("") @map("file_url")
+  priceDuys   Float    @default(0) @map("price_duys")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  @@index([sellerId, active])
+  @@map("shop_listings")
+}
+
+model ShopPurchase {
+  id        Int      @id @default(autoincrement())
+  buyerId   Int      @map("buyer_id")
+  listingId Int      @map("listing_id")
+  paid      Float    @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([buyerId, listingId])
+  @@map("shop_purchases")
+}
+
+model TokenClaim {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  pointsSpent  Int      @map("points_spent")
+  tokensAmount Int      @map("tokens_amount")
+  toAddress    String   @map("to_address")
+  txHash       String   @default("") @map("tx_hash")
+  status       String   @default("pending")
+  errorMsg     String   @default("") @map("error_msg")
+  createdAt    DateTime @default(now()) @map("created_at")
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("token_claims")
+}
+
+model Swap {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  side        String
+  fromAmount  Float    @map("from_amount")
+  toAmount    Float    @map("to_amount")
+  rate        Float
+  userAddress String   @default("") @map("user_address")
+  depositTx   String   @default("") @map("deposit_tx")
+  payoutTx    String   @default("") @map("payout_tx")
+  status      String   @default("awaiting_deposit")
+  errorMsg    String   @default("") @map("error_msg")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("swaps")
+}
+
+model AdminNote {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  adminId   Int      @map("admin_id")
+  note      String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("admin_notes")
+}
+
+model AdminActivityLog {
+  id            Int      @id @default(autoincrement())
+  adminId       Int      @map("admin_id")
+  adminUsername String   @default("") @map("admin_username")
+  action        String
+  targetType    String   @default("") @map("target_type")
+  targetId      Int      @default(0) @map("target_id")
+  detail        String   @default("")
+  createdAt     DateTime @default(now()) @map("created_at")
+  @@index([adminId, createdAt])
+  @@map("admin_activity_log")
+}
+
+model BroadcastLog {
+  id        Int      @id @default(autoincrement())
+  adminId   Int      @map("admin_id")
+  title     String   @default("")
+  body      String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("broadcast_log")
+}
+
+model UserSetting {
+  userId Int    @map("user_id")
+  key    String
+  value  String @default("")
+  @@id([userId, key])
+  @@map("user_settings")
+}
+
+model Draft {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  kind      String   @default("text")
+  body      String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("drafts")
+}
+
+model Bookmark {
+  userId    Int      @map("user_id")
+  postId    Int      @map("post_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@id([userId, postId])
+  @@map("bookmarks")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  action    String
+  detail    String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("activity_log")
+}

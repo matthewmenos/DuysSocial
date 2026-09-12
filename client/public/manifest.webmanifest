@@ -1,0 +1,46 @@
+{
+  "id": "/",
+  "name": "DUYS",
+  "short_name": "DUYS",
+  "description": "Post, connect, broadcast and earn $DUYS.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "background_color": "#000000",
+  "theme_color": "#1d9bf6",
+  "categories": ["social", "communication"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "/icons/icon-192.png",        "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png",        "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png","sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Home",
+      "short_name": "Home",
+      "url": "/?source=shortcut",
+      "icons": [{ "src": "/icons/favicon-48.png", "sizes": "48x48" }]
+    },
+    {
+      "name": "Messages",
+      "short_name": "DMs",
+      "url": "/messages?source=shortcut",
+      "icons": [{ "src": "/icons/favicon-48.png", "sizes": "48x48" }]
+    },
+    {
+      "name": "Earn $DUYS",
+      "short_name": "Earn",
+      "url": "/earn?source=shortcut",
+      "icons": [{ "src": "/icons/favicon-48.png", "sizes": "48x48" }]
+    },
+    {
+      "name": "Wallet",
+      "short_name": "Wallet",
+      "url": "/wallet?source=shortcut",
+      "icons": [{ "src": "/icons/favicon-48.png", "sizes": "48x48" }]
+    }
+  ]
+}

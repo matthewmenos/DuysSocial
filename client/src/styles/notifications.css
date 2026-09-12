@@ -1,0 +1,213 @@
+/* ── Notifications — modern card layout ── */
+
+.ig-notif-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 8px 0 96px;
+}
+
+/* ── Section headers ── */
+.ig-notif-section-head {
+  padding: 20px 20px 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ── Row ── */
+.ig-notif {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 10px 16px;
+  min-height: 68px;
+  text-decoration: none;
+  color: var(--text);
+  border-radius: 14px;
+  margin: 2px 8px;
+  transition: background 0.15s ease, transform 0.12s ease;
+  position: relative;
+}
+.ig-notif:hover {
+  background: var(--bg-hover);
+  transform: translateY(-1px);
+}
+.ig-notif:active { transform: translateY(0); }
+
+/* Unread: left accent bar */
+.ig-notif.unread {
+  background: color-mix(in srgb, var(--blue) 7%, transparent);
+}
+.ig-notif.unread::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--blue);
+}
+
+/* ── Avatar + badge overlay ── */
+.ig-notif-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+}
+.ig-notif-avatar-wrap .avatar,
+.ig-notif-avatar-wrap .avatar-fallback {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+.ig-notif-kind-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+  border: 2.5px solid var(--bg);
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+.nk-like     { background: #f4212e; }
+.nk-comment  { background: #1d9bf6; }
+.nk-follow   { background: #8a3ab9; }
+.nk-tip      { background: #f5a623; }
+.nk-message  { background: #0072ff; }
+.nk-repost   { background: #00ba7c; }
+.nk-referral { background: #6f4cff; }
+.nk-mention  { background: #1d9bf6; font-size:13px; font-weight:700; }
+.nk-system   { background: var(--text-muted); }
+
+/* ── Text body ── */
+.ig-notif-body {
+  flex: 1;
+  min-width: 0;
+}
+.ig-notif-text {
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ig-notif-text strong {
+  font-weight: 700;
+  color: var(--text);
+}
+.ig-notif-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Right: preview thumbnail ── */
+.ig-notif-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 48px;
+}
+
+.ig-notif-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.14);
+}
+.ig-notif-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ig-notif-preview-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(0,0,0,0.38);
+  pointer-events: none;
+}
+.ig-notif-preview-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  background: var(--bg-elevated);
+}
+.ig-notif-preview-text span {
+  font-size: 8.5px;
+  line-height: 1.35;
+  color: var(--text-muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+/* Unread dot — shown when no preview */
+.ig-notif-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 25%, transparent);
+  flex-shrink: 0;
+}
+
+/* ── Empty state ── */
+.ig-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 96px 32px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.ig-empty-state .icon {
+  opacity: 0.25;
+}
+.ig-empty-state h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.ig-empty-state p {
+  font-size: 14px;
+  margin: 0;
+  max-width: 260px;
+  line-height: 1.5;
+}

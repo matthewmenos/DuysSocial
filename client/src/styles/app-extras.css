@@ -1,0 +1,40 @@
+.feed-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.feed-tabs button { flex: 1; padding: 14px; font-weight: 700; color: var(--text-muted); }
+.feed-tabs button.active { color: var(--text); box-shadow: inset 0 -3px 0 var(--blue); }
+.post-card { display: flex; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); }
+.post-actions { display: flex; gap: 18px; margin-top: 10px; color: var(--text-muted); }
+.post-actions a, .post-actions button { display: inline-flex; gap: 6px; align-items: center; }
+.sponsored { color: var(--blue); font-size: 12px; font-weight: 700; margin-left: 8px; }
+.stories-bar { display: flex; gap: 12px; overflow-x: auto; padding: 12px 0; }
+.poll-option { display: block; width: 100%; margin: 6px 0; padding: 10px; border: 1px solid var(--border); border-radius: 999px; }
+.quote-embed { border: 1px solid var(--border); border-radius: 16px; margin-top: 8px; }
+.msg-layout aside { border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.msg-layout aside a { padding: 10px; border-radius: 12px; }
+.bubble { padding: 10px 14px; background: var(--bg-elevated); border-radius: 16px; margin: 8px 0; max-width: 80%; }
+.composer-kinds { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.notif-drop { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.35); }
+.notif-drop-panel { position: absolute; right: 24px; top: 24px; width: 360px; max-height: 70vh; overflow: auto; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+.notif-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.admin-main { flex: 1; }
+.admin-shell { display: flex; min-height: 100vh; }
+.admin-row { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-table th, .admin-table td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+.btn-danger { background: transparent; color: var(--danger, #e0242e); border: 1px solid var(--danger, #e0242e); }
+.chat-rows { display: flex; flex-direction: column; }
+.chat-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; width: 100%; text-align: left; }
+.chat-row.active { background: var(--bg-hover); }
+.chat-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.chat-row-body small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-unread { background: var(--blue); color: #fff; min-width: 20px; height: 20px; border-radius: 999px; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+.chat-thread { display: flex; flex-direction: column; min-height: 70vh; }
+.chat-thread-head { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+.chat-msgs { flex: 1; overflow-y: auto; padding: 12px; }
+.chat-compose { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); }
+.chat-compose input { flex: 1; }
+.chat-empty { padding: 48px; text-align: center; }
+.feed-topbar-search { display: flex; align-items: center; gap: 8px; background: var(--input-bg); border-radius: 999px; padding: 6px 12px; }
+.feed-topbar-search input { background: transparent; border: 0; color: inherit; outline: none; }
+.wlt-connect-form { display: flex; gap: 8px; margin-top: 16px; }
+.wlt-tx-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+
