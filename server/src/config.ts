@@ -34,7 +34,7 @@ export const config = {
   r2Bucket: process.env.R2_BUCKET || "duys-media",
   r2PublicUrl: process.env.R2_PUBLIC_URL || "",
   r2PrivateBucket: process.env.R2_PRIVATE_BUCKET || "duys-private",
-  localUploadDir: path.join(root, "server", "uploads"),
+  localUploadDir: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..", "server", "uploads"),
   pointsAdReward: int("POINTS_AD_REWARD", 10),
   pointsReferralBonus: int("POINTS_REFERRAL_BONUS", 100),
   referralEarnPercent: float("REFERRAL_EARN_PERCENT", 0.01),
