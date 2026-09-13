@@ -1,7 +1,7 @@
 services:
-  # API Server (Express + Prisma)
+  # Full-stack: Express API + React client served from one service
   - type: web
-    name: duys-api
+    name: duys
     runtime: node
     plan: starter
     buildCommand: npm install && npm run build -w server
@@ -17,9 +17,9 @@ services:
       - key: API_PORT
         value: 5000
       - key: APP_URL
-        sync: false
+        value: https://duyssocial.onrender.com
       - key: CLIENT_ORIGIN
-        sync: false
+        value: https://duyssocial.onrender.com
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_USERNAME

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import http from "node:http";
 import express from "express";
 import cors from "cors";
@@ -20,6 +21,8 @@ import { moneyRouter } from "./routes/money.js";
 import { claimRouter } from "./routes/claimRewards.js";
 import { adminRouter } from "./routes/admin.js";
 import { metaRouter } from "./routes/meta.js";
+
+const clientDist = path.join(config.root, "client", "dist");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -63,6 +66,17 @@ fs.mkdirSync(config.localUploadDir, { recursive: true });
 app.use("/media", express.static(config.localUploadDir));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// Serve built client (production)
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/media") || req.path.startsWith("/socket.io")) {
+      return next();
+    }
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+}
 
 const server = http.createServer(app);
 attachSocket(server);
