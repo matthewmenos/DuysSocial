@@ -16,9 +16,8 @@ const float = (k: string, d: number) => {
   return Number.isFinite(n) ? n : d;
 };
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-
 export const config = {
+  root: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.."),
   secret: process.env.SECRET_KEY || "dev-insecure-secret-change-me",
   nodeEnv: process.env.NODE_ENV || "development",
   debug: (process.env.NODE_ENV || "development") !== "production",
