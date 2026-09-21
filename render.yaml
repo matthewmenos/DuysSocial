@@ -4,7 +4,11 @@ services:
     name: duys
     runtime: node
     plan: starter
-    buildCommand: npm install && npm run build:prod -w server
+    # Both `build` and `build:prod` are equivalent: they run
+    # scripts/prisma-setup.mjs, which selects the Prisma schema from the
+    # DATABASE_URL scheme (file: -> sqlite, postgres:// -> derived postgres
+    # schema) before generating the client and pushing the schema.
+    buildCommand: npm install && npm run build -w server
     startCommand: npm start -w server
     healthCheckPath: /health
     envVars:

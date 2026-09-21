@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && prisma db push && tsc -p tsconfig.json && npm run build -w client",
-    "build:prod": "npm run db:generate:pg && npm run db:push:pg && tsc -p tsconfig.json && npm run build -w client",
+    "build": "node scripts/prisma-setup.mjs && tsc -p tsconfig.json && npm run build -w client",
+    "build:prod": "npm run build",
     "postinstall": "prisma generate",
     "start": "node dist/index.js",
     "test": "node test/run.mjs",

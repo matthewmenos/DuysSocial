@@ -7,6 +7,8 @@
 //
 // Usage (production build):
 //   npm run db:generate:pg && npm run db:push:pg
+// or just `npm run build`, which calls scripts/prisma-setup.mjs and picks the
+// right schema automatically.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,15 +17,25 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const src = path.resolve(here, "..", "prisma", "schema.prisma");
 const out = path.resolve(here, "..", "prisma", "schema.postgres.prisma");
 
-const sqlite = fs.readFileSync(src, "utf8");
+/** Writes prisma/schema.postgres.prisma and returns its path. */
+export function derivePostgresSchema() {
+  const sqlite = fs.readFileSync(src, "utf8");
 
-if (!/provider\s*=\s*"sqlite"/.test(sqlite)) {
-  throw new Error(
-    `Expected \`provider = "sqlite"\` in ${src}.\n` +
-      "Refusing to derive a postgres schema from an unexpected source.",
-  );
+  if (!/provider\s*=\s*"sqlite"/.test(sqlite)) {
+    throw new Error(
+      `Expected \`provider = "sqlite"\` in ${src}.\n` +
+        "Refusing to derive a postgres schema from an unexpected source.",
+    );
+  }
+
+  const postgres = sqlite.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
+  fs.writeFileSync(out, postgres);
+  console.log(`wrote ${path.relative(process.cwd(), out)} (provider = postgresql)`);
+  return out;
 }
 
-const postgres = sqlite.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
-fs.writeFileSync(out, postgres);
-console.log(`wrote ${path.relative(process.cwd(), out)} (provider = postgresql)`);
+// Still runnable directly: `node scripts/make-postgres-schema.mjs`
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  derivePostgresSchema();
+}
+

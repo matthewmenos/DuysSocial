@@ -22,8 +22,23 @@ two flavours can never drift apart:
 ```bash
 # DATABASE_URL=postgresql://user:pass@host:5432/duys
 npm run db:push:pg
-npm run build:prod   # prisma generate (pg) + db push (pg) + API build + client build
+npm run build        # picks the right provider automatically — see below
 ```
+
+**Builds select the provider from `DATABASE_URL` themselves.** `npm run build` (and its
+`build:prod` alias, which is now just an alias) runs `server/scripts/prisma-setup.mjs`:
+
+| `DATABASE_URL` starts with | Schema used | Steps |
+| --- | --- | --- |
+| `file:` | `prisma/schema.prisma` (sqlite) | `generate` + `db push` |
+| `postgres://` or `postgresql://` | derived `prisma/schema.postgres.prisma` | `generate` + `db push` |
+| anything else / unset | — | exits 1 with an actionable message |
+
+This exists because Prisma validates that the datasource `provider` matches the URL scheme. A
+build that always ran the SQLite schema against a `postgres://` URL died before TypeScript even
+started, with `P1012 … the URL must start with the protocol 'file:'`. Now the same command is
+correct in both environments, so a hosting dashboard whose build command drifted from
+`render.yaml` still deploys.
 
 `docker-compose.yml` still starts a local PostgreSQL if you prefer to develop against Postgres.
 
