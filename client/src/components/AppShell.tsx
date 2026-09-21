@@ -8,24 +8,39 @@ import { Composer } from "./Composer";
 import { CallOverlay } from "./CallOverlay";
 import { PageLoading } from "./PageState";
 
+/** Routes that render without a signed-in user (everything else redirects). */
+function isPublicRoute(pathname: string) {
+  if (pathname.startsWith("/auth") || pathname.startsWith("/legal")) return true;
+  return pathname === "/explore" || pathname.startsWith("/posts/");
+}
+
 export function AppShell() {
   const { boot, refresh, loading, setTheme } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
+
+  // Anonymous users must leave protected routes immediately. Boot is null only
+  // on the very first load, so the redirect fires as soon as the session check
+  // resolves (replace:true keeps / off the back-button stack).
+  useEffect(() => {
+    if (!loading && boot && !boot.user && !isPublicRoute(loc.pathname)) {
+      nav("/auth/login", { replace: true });
+    }
+  }, [boot, loading, loc.pathname, nav]);
   const [composer, setComposer] = useState(false);
   const [tray, setTray] = useState(false);
   const [notifs, setNotifs] = useState<{ id: number; text: string; isRead: boolean }[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const user = boot?.user;
 
-  useEffect(() => {
-    if (boot && !boot.user && !loc.pathname.startsWith("/auth") && !loc.pathname.startsWith("/legal")) {
-      nav("/auth/login");
-    }
-  }, [boot, loc.pathname, nav]);
-
   if (!boot || loading) return <PageLoading label="Starting DUYS…" />;
-  if (!user) return <Outlet />;
+  // Protected pages render a placeholder while the redirect above takes
+  // effect, instead of flashing their fetch-then-fail states.
+  if (!user) {
+    return isPublicRoute(loc.pathname)
+      ? <Outlet />
+      : <PageLoading label="Redirecting to login…" rows={0} />;
+  }
   const me = user;
 
   useEffect(() => {

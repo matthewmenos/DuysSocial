@@ -21,7 +21,7 @@ export function HomePage() {
   const load = () => api(`/api/feed?scope=${scope}`).then((d) => {
     setData(d);
     if (d.posts?.length) setTopPostId(d.posts[0].id);
-  });
+  }).catch(() => {});
   useEffect(() => { load(); }, [scope]);
   // Poll for new posts every 30s
   useEffect(() => {
@@ -42,7 +42,8 @@ export function HomePage() {
     setNewPosts(0);
     load();
   }, []);
-  if (!data || !boot?.user) return <PageLoading label="Loading your feed…" />;
+  if (!boot?.user) return null; // AppShell redirects; never render the feed loader
+  if (!data) return <PageLoading label="Loading your feed…" />;
   const user = boot.user;
   return (
     <>

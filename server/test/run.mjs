@@ -126,6 +126,17 @@ async function main() {
   const forbidden = await j("/api/admin/overview", {}, aliceCookie);
   check("non-admin rejected from admin", forbidden.status === 403);
 
+  // Legal document API: full structured copy (headings, lists, year).
+  const terms = await j("/api/legal/terms");
+  const hasBlocks = Array.isArray(terms.body.doc?.blocks) && terms.body.doc.blocks.length > 3;
+  const hasPrivacyList = terms.body.doc?.updated === String(new Date().getFullYear());
+  check("legal terms returns structured doc", terms.status === 200 && terms.body.title === "Terms of Service" && hasBlocks && hasPrivacyList);
+  const privacy = await j("/api/legal/privacy");
+  const privacyList = privacy.body.doc?.blocks?.find((b) => b.kind === "list");
+  check("legal privacy keeps the What-we-collect list", privacy.status === 200 && Array.isArray(privacyList?.items) && privacyList.items.length >= 4);
+  const bogus = await j("/api/legal/cookies");
+  check("unknown legal page 404s", bogus.status === 404 && bogus.body.error === "not_found");
+
   const quote = await j("/api/swap/quote", { method: "POST", body: JSON.stringify({ side: "buy", fromAmount: 10 }) }, aliceCookie);
   check("swap quote uses live/fallback mid", quote.status === 200 && quote.body.toAmount > 0 && quote.body.mid > 0);
 

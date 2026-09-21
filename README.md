@@ -92,6 +92,8 @@ production. Please keep them when adding pages or changing the shell.
    `SkeletonList` (avatar + two lines) are exported for content-shaped placeholders — use them
    instead of letting an empty list flash its "nothing here yet" state before the fetch lands
    (see `MessagesPage`, which gates its empty state on a `listLoaded` flag).
+   Guards that run before the data fetch (e.g. a session check) must `return null` rather than a
+   spinner when the shell's own redirect is already moving the user along — see `HomePage`.
 3. **The service worker only ever touches navigations.** `client/public/sw.js` answers
    `mode === "navigate"` requests network-first and falls back to the precached `/offline.html`.
    It must never synthesise responses for JS/CSS chunks — returning a plain-text body for a script

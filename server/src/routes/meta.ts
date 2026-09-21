@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma, getSetting } from "../prisma.js";
 import { requireAuth, type AuthedRequest } from "../session.js";
 import { config } from "../config.js";
+import { legalDocs, legalPayload } from "../legal/index.js";
 
 export const metaRouter = Router();
 
@@ -122,11 +123,8 @@ metaRouter.post("/push/unsubscribe", requireAuth, async (req: AuthedRequest, res
 
 metaRouter.get("/legal/:page", (req, res) => {
   const page = String(req.params.page);
-  const copy: Record<string, { title: string; body: string }> = {
-    terms: { title: "Terms of Service", body: "Use DUYS respectfully. Do not spam, scam, or post illegal content. $DUYS points are in-app rewards, not investment advice." },
-    privacy: { title: "Privacy Policy", body: "We store account data, posts, messages, and optional verification photos. Media may live on Cloudflare R2. You can delete your account in Settings." },
-    guidelines: { title: "Community Guidelines", body: "Be civil. No harassment, CSAM, or violent threats. Report abuse. Repeat offenders may be banned." },
-  };
-  if (!copy[page]) return res.status(404).json({ error: "not_found" });
-  res.json(copy[page]);
+  const docs = legalDocs(config.appName);
+  const doc = docs[page];
+  if (!doc) return res.status(404).json({ error: "not_found" });
+  res.json(legalPayload(doc, docs));
 });
