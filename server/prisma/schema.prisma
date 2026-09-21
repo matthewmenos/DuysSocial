@@ -2,8 +2,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Local dev / test use SQLite (zero dependencies; matches the checked-in .env and
+// server/test/run.mjs). Production uses PostgreSQL: `npm run db:push:pg` writes a
+// postgresql-flavoured copy of this file via server/scripts/make-postgres-schema.mjs,
+// so this file stays the single source of truth.
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -20,7 +24,7 @@ model User {
   avatarUrl              String    @default("") @map("avatar_url")
   bannerUrl              String    @default("") @map("banner_url")
   points                 Int       @default(0)
-  pointsBalance          Int       @default(0) @map("points_balance") // Alias for points — same column, explicit name
+  pointsBalance          Int       @default(0) @map("points_balance") // LEGACY/unused column (kept so prod db push needs no data-loss flag) — `points` is authoritative
   duysTokens             Float     @default(0) @map("duys_tokens")
   balanceCents           Int       @default(0) @map("balance_cents")
   verifiedBadge          String    @default("") @map("verified_badge")
@@ -30,8 +34,11 @@ model User {
   twofaSecret            String    @default("") @map("twofa_secret")
   twofaEnabled           Boolean   @default(false) @map("twofa_enabled")
   referredById           Int?      @map("referred_by")
-  walletAddress          String    @default("") @unique @map("wallet_address")
-  walletAddressHash      String?   @unique @map("wallet_address_hash") // sha256 hash of walletAddress for unique index without exposing address
+  // Nullable with NO unique index: an unlinked wallet must not collide with other
+  // unlinked users. Uniqueness is enforced on walletAddressHash (below) so a plain
+  // address can never be probed via a unique-index violation.
+  walletAddress          String?   @map("wallet_address")
+  walletAddressHash      String?   @unique @map("wallet_address_hash") // sha256(address.toLowerCase()) — the unique index lives here
   ringtoneUrl            String    @default("") @map("ringtone_url")
   theme                  String    @default("dark")
   lastSeen               DateTime? @map("last_seen")

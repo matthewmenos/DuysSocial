@@ -6,10 +6,11 @@ import { requireAuth, type AuthedRequest } from "../session.js";
 import { config } from "../config.js";
 import { creditPoints, spendPoints, spendTokens, creditTokens } from "../services/points.js";
 import { notify } from "../services/notify.js";
-import { saveFile } from "../services/storage.js";
-import { startCall, drainMailbox, getCall, pushCallEvent } from "../socket.js";
+import { saveFile, deleteFiles } from "../services/storage.js";
+import { startCall, drainMailbox, getCall, endCall, pushCallEvent } from "../socket.js";
 import { ethers } from "ethers";
 import { fetchMidRate, applySpread, toAmount } from "../services/swap.js";
+import { handleClaim, walletHash } from "../services/claims.js";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 } });
 export const moneyRouter = Router();
@@ -95,57 +96,29 @@ moneyRouter.post("/wallet/connect/verify", requireAuth, async (req: AuthedReques
   if (recovered.toLowerCase() !== address.toLowerCase()) {
     return res.status(400).json({ error: "signer_mismatch" });
   }
+  // The unique index lives on the hash, so a plain address can never be probed
+  // and unlinked users never collide on an empty-string default.
+  const hash = walletHash(address);
+  const taken = await prisma.user.findFirst({
+    where: { walletAddressHash: hash, id: { not: req.user!.id } },
+  });
+  if (taken) return res.status(409).json({ error: "wallet_taken" });
   walletNonces.delete(req.user!.id);
-  await prisma.user.update({ where: { id: req.user!.id }, data: { walletAddress: address } });
+  await prisma.user.update({
+    where: { id: req.user!.id },
+    data: { walletAddress: address, walletAddressHash: hash },
+  });
   res.json({ ok: true, address });
 });
 
 moneyRouter.post("/wallet/disconnect", requireAuth, async (req: AuthedRequest, res) => {
-  await prisma.user.update({ where: { id: req.user!.id }, data: { walletAddress: "" } });
+  await prisma.user.update({ where: { id: req.user!.id }, data: { walletAddress: null, walletAddressHash: null } });
   res.json({ ok: true });
 });
 
-moneyRouter.post("/wallet/claim-tokens", requireAuth, async (req: AuthedRequest, res) => {
-  const to = String(req.body.toAddress || req.user!.walletAddress);
-  if (!to) return res.status(400).json({ error: "no_address" });
-  const points = req.user!.points;
-  if (points < config.claimMinPoints) return res.status(400).json({ error: "below_min" });
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const today = await prisma.tokenClaim.count({
-    where: { userId: req.user!.id, createdAt: { gte: start }, status: { not: "failed" } },
-  });
-  const max = req.user!.verifiedBadge ? config.claimMaxDailyVerified : config.claimMaxDaily;
-  if (today >= max) return res.status(400).json({ error: "daily_limit" });
-  const tokens = Math.floor(points / config.claimPointsPerToken);
-  const spent = tokens * config.claimPointsPerToken;
-  await spendPoints(req.user!.id, spent, "claim_tokens", to);
-  const claim = await prisma.tokenClaim.create({
-    data: { userId: req.user!.id, pointsSpent: spent, tokensAmount: tokens, toAddress: to, status: "pending" },
-  });
-  if (config.blockchainEnabled) {
-    try {
-      const provider = new ethers.JsonRpcProvider(config.bscRpc);
-      const wallet = new ethers.Wallet(config.vaultKey, provider);
-      const erc20 = new ethers.Contract(config.duysContract, ["function transfer(address to,uint256 amount) returns (bool)"], wallet);
-      const tx = await erc20.transfer(to, ethers.parseUnits(String(tokens), 18));
-      const rec = await tx.wait();
-      await prisma.tokenClaim.update({
-        where: { id: claim.id },
-        data: { status: "confirmed", txHash: rec?.hash || tx.hash },
-      });
-      return res.json({ ok: true, txHash: rec?.hash || tx.hash });
-    } catch (e) {
-      await prisma.tokenClaim.update({
-        where: { id: claim.id },
-        data: { status: "failed", errorMsg: String(e).slice(0, 200) },
-      });
-      await creditPoints(req.user!.id, spent, "claim_refund", String(claim.id));
-      return res.status(500).json({ error: "chain_failed" });
-    }
-  }
-  res.json({ ok: true, claim, note: "blockchain_disabled_pending" });
-});
+// Delegates to services/claims.ts (same implementation as POST /api/claim-rewards)
+// so locking, daily limits and refunds can never drift between the two routes.
+moneyRouter.post("/wallet/claim-tokens", requireAuth, handleClaim);
 
 moneyRouter.get("/earn", requireAuth, async (req: AuthedRequest, res) => {
   const views = await prisma.adView.findMany({ where: { userId: req.user!.id }, orderBy: { id: "desc" }, take: 20 });
@@ -159,8 +132,12 @@ moneyRouter.post("/earn/ad", requireAuth, async (req: AuthedRequest, res) => {
 });
 
 moneyRouter.post("/earn/webhooks/hypelab", async (req, res) => {
-  // Reject unsigned payloads when a signing secret is configured.
-  if (config.hypelabSigningSecret) {
+  // A rewarded-ad webhook mints points, so it must never be open in production:
+  // with a signing secret configured the HMAC is mandatory; without one we only
+  // accept calls in dev/test (otherwise anyone could credit themselves points).
+  if (!config.hypelabSigningSecret) {
+    if (!config.debug) return res.status(503).json({ error: "webhook_disabled" });
+  } else {
     const raw = (req as { rawBody?: Buffer }).rawBody;
     const provided = String(req.headers["x-hypelab-signature"] || req.headers["x-signature"] || "");
     if (!raw || !provided) return res.status(401).json({ error: "signature_required" });
@@ -184,7 +161,23 @@ moneyRouter.post("/earn/webhooks/hypelab", async (req, res) => {
 moneyRouter.get("/referral", requireAuth, async (req: AuthedRequest, res) => {
   const refs = await prisma.referral.findMany({ where: { referrerId: req.user!.id } });
   const users = await prisma.user.findMany({ where: { id: { in: refs.map((r) => r.refereeId) } } });
-  res.json({ code: req.user!.username, count: refs.length, referees: users.map((u) => ({ username: u.username, displayName: u.displayName })) });
+  const cuts = await prisma.pointLedger.findMany({
+    where: { userId: req.user!.id, reason: "referral_cut" },
+    select: { delta: true },
+  });
+  res.json({
+    code: req.user!.username,
+    count: refs.length,
+    bonus: config.pointsReferralBonus,
+    percent: Math.round(config.referralEarnPercent * 100),
+    earned: cuts.reduce((sum, c) => sum + c.delta, 0),
+    referees: users.map((u) => ({
+      username: u.username,
+      displayName: u.displayName,
+      avatarUrl: u.avatarUrl,
+      createdAt: u.createdAt,
+    })),
+  });
 });
 
 moneyRouter.get("/leaderboard", requireAuth, async (_req, res) => {
@@ -207,7 +200,20 @@ moneyRouter.get("/verification", requireAuth, async (req: AuthedRequest, res) =>
     face: req.user!.faceVerifyStatus,
     fees,
     pending,
+    // Balance strip on the verification page (legacy shows both).
+    points: req.user!.points,
+    tokens: req.user!.duysTokens,
   });
+});
+
+// "Your Applications" list on the verification page.
+moneyRouter.get("/verification/history", requireAuth, async (req: AuthedRequest, res) => {
+  const requests = await prisma.verificationRequest.findMany({
+    where: { userId: req.user!.id },
+    orderBy: { id: "desc" },
+    take: 10,
+  });
+  res.json({ requests });
 });
 
 moneyRouter.post("/verification/apply", requireAuth, async (req: AuthedRequest, res) => {
@@ -350,7 +356,7 @@ moneyRouter.post("/swap/start", requireAuth, async (req: AuthedRequest, res) => 
       fromAmount,
       toAmount: quote,
       rate,
-      userAddress: String(req.body.userAddress || req.user!.walletAddress),
+      userAddress: String(req.body.userAddress || req.user!.walletAddress || ""),
     },
   });
   res.json({ swap, depositAddress: config.vaultAddress, mid, rate });
@@ -398,8 +404,12 @@ moneyRouter.post("/swap/confirm", requireAuth, async (req: AuthedRequest, res) =
         ["function transfer(address to,uint256 amount) returns (bool)"],
         wallet,
       );
+      const payoutTo = swap.userAddress || req.user!.walletAddress || "";
+      if (!/^0x[a-fA-F0-9]{40}$/.test(payoutTo)) {
+        return res.status(400).json({ error: "no_address" });
+      }
       const tx = await erc20.transfer(
-        swap.userAddress || req.user!.walletAddress,
+        payoutTo,
         ethers.parseUnits(String(swap.toAmount), config.usdtDecimals),
       );
       const rec = await tx.wait();
@@ -513,6 +523,7 @@ moneyRouter.post("/stories/:id/delete", requireAuth, async (req: AuthedRequest, 
   const s = await prisma.story.findUnique({ where: { id: Number(req.params.id) } });
   if (!s || s.authorId !== req.user!.id) return res.status(403).json({ error: "forbidden" });
   await prisma.story.delete({ where: { id: s.id } });
+  await deleteFiles([s.mediaKey]);
   res.json({ ok: true });
 });
 
@@ -537,7 +548,7 @@ moneyRouter.post("/calls/:id/decline", requireAuth, (req: AuthedRequest, res) =>
 });
 
 moneyRouter.post("/calls/:id/end", requireAuth, (req: AuthedRequest, res) => {
-  const c = getCall(String(req.params.id));
+  const c = endCall(String(req.params.id));
   for (const m of c?.members || []) pushCallEvent(m, { type: "ended", callId: req.params.id });
   res.json({ ok: true });
 });

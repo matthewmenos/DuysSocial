@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../auth";
 import { Icon } from "../../components/Icon";
+import { PageError, PageLoading } from "../../components/PageState";
 import { socket } from "../../socket";
 
 export function LiveRoomPage() {
@@ -10,13 +11,16 @@ export function LiveRoomPage() {
   const { boot } = useAuth();
   const nav = useNavigate();
   const [room, setRoom] = useState<any>(null);
+  const [loadErr, setLoadErr] = useState("");
   const [chat, setChat] = useState("");
   const [msgs, setMsgs] = useState<any[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const host = room?.room?.hostId === boot?.user?.id;
 
-  const load = () => api(`/api/live/${id}`).then((d) => { setRoom(d); setMsgs(d.messages || []); });
-  useEffect(() => { load(); }, [id]);
+  const load = () => api(`/api/live/${id}`)
+    .then((d) => { setRoom(d); setMsgs(d.messages || []); setLoadErr(""); })
+    .catch((ex) => setLoadErr((ex as Error).message || "This live room is unavailable."));
+  useEffect(() => { void load(); }, [id]);
 
   useEffect(() => {
     socket.emit("join_live", Number(id));
@@ -56,7 +60,8 @@ export function LiveRoomPage() {
     return () => { clearInterval(timer); stream?.getTracks().forEach((t) => t.stop()); };
   }, [host, id]);
 
-  if (!room) return null;
+  if (loadErr) return <PageError message={loadErr} onRetry={() => void load()} />;
+  if (!room) return <PageLoading label="Joining live room…" />;
   const r = room.room;
   return (
     <div className="lr-room" id="lr-room">

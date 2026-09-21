@@ -17,6 +17,7 @@ import "./styles/calls.css";
 import "./styles/shop.css";
 import "./styles/leaderboard.css";
 import "./styles/legal.css";
+import "./styles/verification.css";
 import "./styles/admin.css";
 import "./styles/app-extras.css";
 
@@ -30,12 +31,38 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: unknown, info: React.ErrorInfo) {
+    if (import.meta.env.DEV) console.error("React error boundary:", error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-page" style={{ padding: 40, textAlign: "center" }}>
+          <h1>Something went wrong</h1>
+          <p>Refresh the page to try again, or <a href="/auth/login">log in</a>.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>,
 );

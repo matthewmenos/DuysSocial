@@ -1,5 +1,8 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth";
 import { Icon } from "../../components/Icon";
+import { PageLoading } from "../../components/PageState";
 
 const links = [
   ["Overview", "/admin"],
@@ -27,6 +30,21 @@ const links = [
 ];
 
 export function AdminShell() {
+  const { boot, loading } = useAuth();
+  const nav = useNavigate();
+
+  // /admin sits outside AppShell, so it must do its own gate. Without this a
+  // refresh (or a non-admin visiting the URL) rendered the panel shell while
+  // every admin API call 403'd — i.e. a blank screen.
+  useEffect(() => {
+    if (loading) return;
+    if (!boot?.user) nav("/auth/login", { replace: true });
+    else if (!boot.user.isAdmin) nav("/", { replace: true });
+  }, [boot, loading, nav]);
+
+  if (loading) return <PageLoading label="Checking access…" />;
+  if (!boot?.user || !boot.user.isAdmin) return <PageLoading label="Redirecting…" />;
+
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">

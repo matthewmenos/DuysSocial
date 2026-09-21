@@ -434,4 +434,93 @@
   .composer-body { font-size: 16px; }
 }
 
-/* Call styles moved to calls.css (loaded via base.html) */
+/* ── Empty states ── */
+.bc-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 32px; color: var(--text-muted); }
+
+/* ── Page loading / error placeholders ──
+   Replaces the bare `return null` that made a refresh look like a blank screen. */
+.page-loading {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 64px 20px; color: var(--text-muted); min-height: 40vh;
+}
+
+/* Animated mark: a sweeping arc, expanding ripple halo, and a pulsing core. */
+.page-loading-mark {
+  position: relative; display: inline-grid; place-items: center;
+  width: 56px; height: 56px;
+}
+.page-loading-arc {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 90deg, transparent 0deg, var(--blue) 300deg, transparent 360deg);
+  -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  animation: pageArc .95s linear infinite;
+}
+.page-loading-core {
+  width: 13px; height: 13px; border-radius: 50%; background: var(--blue);
+  box-shadow: 0 0 12px var(--blue-glow);
+  animation: pageCore 1.3s ease-in-out infinite;
+}
+.page-loading-ripple {
+  position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--blue);
+  animation: pageRipple 2.1s cubic-bezier(.2, .7, .3, 1) infinite;
+}
+.page-loading-ripple-2 { animation-delay: 1.05s; }
+
+@keyframes pageArc { to { transform: rotate(360deg); } }
+@keyframes pageCore {
+  0%, 100% { transform: scale(.75); opacity: .75; }
+  50%      { transform: scale(1.15); opacity: 1; }
+}
+@keyframes pageRipple {
+  0%   { transform: scale(.35); opacity: 0; }
+  25%  { opacity: .55; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* Label: a light sheen sweeps across the text. */
+.page-loading-text { font-size: 14px; font-weight: 700; letter-spacing: .01em; }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .page-loading-text {
+    background: linear-gradient(90deg, var(--text-muted) 0%, var(--text) 25%, var(--blue) 45%, var(--text-muted) 70%);
+    background-size: 220% 100%;
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    animation: pageSheen 1.9s linear infinite;
+  }
+}
+@keyframes pageSheen { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+.page-loading-rows {
+  display: flex; flex-direction: column; gap: 9px;
+  width: min(420px, 100%); margin-top: 4px;
+}
+
+/* Placeholder bars — the sweep is transform-based so it stays on the GPU. */
+.sk {
+  position: relative; display: block; overflow: hidden;
+  background: var(--skeleton, rgba(128, 128, 128, .12));
+  border-radius: 8px;
+}
+.sk::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--skeleton-shine, rgba(255, 255, 255, .07)), transparent);
+  animation: skSweep 1.5s ease-in-out infinite;
+  animation-delay: var(--sk-delay, 0s);
+}
+@keyframes skSweep { to { transform: translateX(100%); } }
+.sk-circle { width: 44px; height: 44px; border-radius: 50%; }
+
+.sk-list { display: flex; flex-direction: column; gap: 16px; padding: 14px 14px 4px; }
+.sk-list-row { display: flex; align-items: center; gap: 12px; }
+.sk-list-lines { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+
+.page-error {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 56px 20px; text-align: center; color: var(--text-muted);
+  min-height: 40vh;
+}
+.page-error h3 { color: var(--text); font-size: 18px; }
+.page-error p { font-size: 14px; max-width: 340px; }
+.page-error-actions { display: flex; gap: 10px; margin-top: 6px; }
+

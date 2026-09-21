@@ -21,18 +21,32 @@ export async function creditPoints(userId: number, delta: number, reason: string
   }
 }
 
+/**
+ * ATOMIC points debit: the `points >= amount` guard lives in the WHERE clause, so
+ * concurrent spends (tip + claim + shop at once) can never overdraw a balance —
+ * the previous read-then-decrement version could.
+ */
 export async function spendPoints(userId: number, amount: number, reason: string, ref = "") {
-  const u = await prisma.user.findUnique({ where: { id: userId } });
-  if (!u || u.points < amount) return false;
-  await creditPoints(userId, -amount, reason, ref);
-  return true;
+  if (amount <= 0) return true;
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.user.updateMany({
+      where: { id: userId, points: { gte: amount } },
+      data: { points: { decrement: amount } },
+    });
+    if (updated.count === 0) return false;
+    await tx.pointLedger.create({ data: { userId, delta: -amount, reason, ref } });
+    return true;
+  });
 }
 
+/** ATOMIC token debit using the same guarded-update pattern. */
 export async function spendTokens(userId: number, amount: number) {
-  const u = await prisma.user.findUnique({ where: { id: userId } });
-  if (!u || u.duysTokens < amount) return false;
-  await prisma.user.update({ where: { id: userId }, data: { duysTokens: { decrement: amount } } });
-  return true;
+  if (amount <= 0) return true;
+  const updated = await prisma.user.updateMany({
+    where: { id: userId, duysTokens: { gte: amount } },
+    data: { duysTokens: { decrement: amount } },
+  });
+  return updated.count > 0;
 }
 
 export async function creditTokens(userId: number, amount: number) {

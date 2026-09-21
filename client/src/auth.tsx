@@ -24,14 +24,23 @@ type Boot = {
   postCharLimit: number;
 };
 
-const Ctx = createContext<{
+type AuthContext = {
   boot: Boot | null;
+  loading: boolean;
   refresh: () => Promise<void>;
   setTheme: (t: string) => void;
-}>({ boot: null, refresh: async () => {}, setTheme: () => {} });
+};
+
+const Ctx = createContext<AuthContext>({
+  boot: null,
+  loading: true,
+  refresh: async () => {},
+  setTheme: () => {},
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [boot, setBoot] = useState<Boot | null>(null);
+  const [loading, setLoading] = useState(true);
   const refresh = async () => {
     const data = await api("/api/bootstrap");
     setBoot(data);
@@ -39,14 +48,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute("data-theme", theme);
   };
   useEffect(() => {
-    refresh().catch(() => setBoot({ appName: "DUYS", user: null, unreadNotifications: 0, unreadMessages: 0, announcementEnabled: false, announcementText: "", googleEnabled: false, vapidPublic: "", postCharLimit: 500 }));
+    refresh().catch(() => {}).finally(() => setLoading(false));
   }, []);
   const setTheme = (t: string) => {
     document.documentElement.setAttribute("data-theme", t);
     localStorage.setItem("duys-theme", t);
     setBoot((b) => (b ? { ...b, user: b.user ? { ...b.user, theme: t } : null } : b));
   };
-  return <Ctx.Provider value={{ boot, refresh, setTheme }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ boot, loading, refresh, setTheme }}>{children}</Ctx.Provider>;
 }
 
 export const useAuth = () => useContext(Ctx);

@@ -1,11 +1,13 @@
 import { useParams } from "react-router-dom";
 import { api } from "../../api";
 import { useAdmin } from "./useAdmin";
+import { PageError, PageLoading } from "../../components/PageState";
 
 export function AdminUserDetail() {
   const { id } = useParams();
-  const { data, load } = useAdmin(`/api/admin/users/${id}`);
-  if (!data) return null;
+  const { data, load, error } = useAdmin(`/api/admin/users/${id}`);
+  if (error) return <PageError message={error} onRetry={() => void load()} />;
+  if (!data) return <PageLoading label="Loading user…" />;
   const u = data.user;
   return (
     <div>

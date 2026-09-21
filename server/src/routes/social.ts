@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { requireAuth, type AuthedRequest } from "../session.js";
-import { charLimit, feed, serializePost } from "../services/posts.js";
-import { saveFile } from "../services/storage.js";
+import { charLimit, feed, postAssetKeys, serializePost } from "../services/posts.js";
+import { saveFile, deleteFiles } from "../services/storage.js";
 import { creditTokens, spendTokens } from "../services/points.js";
 import { notify } from "../services/notify.js";
 import { getFeedCache, setFeedCache, invalidateFeedCache } from "../services/cache.js";
@@ -337,7 +337,11 @@ socialRouter.post("/posts/:id/delete", requireAuth, async (req: AuthedRequest, r
   const post = await prisma.post.findUnique({ where: { id: Number(req.params.id) } });
   if (!post) return res.status(404).json({ error: "not_found" });
   if (post.authorId !== req.user!.id && !req.user!.isAdmin) return res.status(403).json({ error: "forbidden" });
+  // Collect media keys BEFORE deleting rows, then free the objects best-effort.
+  const keys = await postAssetKeys(post.id);
   await prisma.post.delete({ where: { id: post.id } });
+  await deleteFiles(keys);
+  invalidateFeedCache(post.authorId);
   res.json({ ok: true });
 });
 

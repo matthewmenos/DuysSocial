@@ -61,3 +61,14 @@ export async function deleteFile(key: string, privateBucket = false) {
   }
   await fs.unlink(path.join(config.localUploadDir, key)).catch(() => {});
 }
+
+/**
+ * Best-effort removal of several stored objects (record-delete parity with the
+ * Flask app: deleting a post/story removes its media). Never throws.
+ */
+export async function deleteFiles(keys: (string | null | undefined)[], privateBucket = false) {
+  for (const key of keys) {
+    if (!key) continue;
+    await deleteFile(key, privateBucket).catch(() => {});
+  }
+}

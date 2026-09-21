@@ -1,4 +1,5 @@
 import { useAdmin } from "./useAdmin";
+import { PageError, PageLoading } from "../../components/PageState";
 
 type RowAction = { label: string; style?: string; call: (row: unknown) => Promise<unknown> | unknown };
 
@@ -13,9 +14,10 @@ export function AdminTable({
   idKey?: string;
   actions?: RowAction[];
 }) {
-  const { data, load } = useAdmin(path);
+  const { data, load, error } = useAdmin(path);
   const rows = data ? (data[Object.keys(data)[0]] as any[]) : [];
-  if (!data) return null;
+  if (error) return <PageError message={error} onRetry={() => void load()} />;
+  if (!data) return <PageLoading label={`Loading ${title.toLowerCase()}…`} />;
   const cols = [...new Set(rows.flatMap((r) => Object.keys(r)))].slice(0, 6);
   return (
     <div>

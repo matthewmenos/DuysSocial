@@ -103,3 +103,9 @@ export async function charLimit(verified: boolean) {
     ? Number(await getSetting("post_char_limit_verified", config.postCharLimitVerified))
     : Number(await getSetting("post_char_limit", config.postCharLimit));
 }
+
+/** Storage keys of a post's media, so deleting the post can free the objects too. */
+export async function postAssetKeys(postId: number) {
+  const rows = await prisma.media.findMany({ where: { postId }, select: { key: true } });
+  return rows.map((r) => r.key);
+}

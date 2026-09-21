@@ -1,4 +1,4 @@
-/* ─── DUYS theme tokens: blue-led, dark & light ─── */
+﻿/* â”€â”€â”€ DUYS theme tokens: blue-led, dark & light â”€â”€â”€ */
 :root {
   --blue: #1d9bf6;
   --blue-600: #1a8cdb;
@@ -45,6 +45,9 @@
   --wlt-card-bg: #16181c;
   --wlt-border: #2f3336;
   --wlt-muted: #71767b;
+  /* Placeholder shimmer (skeleton bars, loading rows) */
+  --skeleton: rgba(255, 255, 255, 0.06);
+  --skeleton-shine: rgba(255, 255, 255, 0.10);
 }
 
 /* Light */
@@ -73,6 +76,9 @@
   --wlt-card-bg: #f7f9f9;
   --wlt-border: #eff3f4;
   --wlt-muted: #536471;
+  /* Placeholder shimmer (skeleton bars, loading rows) */
+  --skeleton: rgba(15, 20, 25, 0.07);
+  --skeleton-shine: rgba(255, 255, 255, 0.9);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -112,6 +118,9 @@ img { display: block; max-width: 100%; }
 .btn-lg { padding: 13px 26px; font-size: 16px; }
 .btn-sm { padding: 6px 12px; font-size: 13px; }
 .btn-google { background: #fff; color: #111; border: 1px solid #dadce0; }
+/* Neutral outline button (the templates use .btn-secondary for owned/neutral states). */
+.btn-secondary { background: var(--bg-elevated); color: var(--text); border-color: var(--border); }
+.btn-secondary:hover { background: var(--bg-hover); border-color: var(--text-muted); }
 
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -131,8 +140,12 @@ img { display: block; max-width: 100%; }
 }
 .card h3 { margin-bottom: 12px; }
 label { display: block; margin: 10px 0; font-size: 14px; font-weight: 600; }
-input[type=text], input[type=email], input[type=url], input[type=number],
-input[type=search], input[type=password], textarea, select {
+/* Every text-like control, including <input> with NO type attribute. An omitted
+   type still means text in HTML, but an attribute-only selector silently skipped
+   those fields â€” which left a lot of forms rendering unstyled. */
+input:not([type]), input[type=text], input[type=email], input[type=url], input[type=number],
+input[type=search], input[type=password], input[type=tel], input[type=date],
+input[type=time], input[type=datetime-local], input[type=color], textarea, select {
   width: 100%; margin-top: 6px; padding: 11px 14px; border-radius: var(--radius-sm);
   background: var(--input-bg); border: 1px solid var(--border); color: var(--text);
   outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -142,7 +155,22 @@ input:focus, textarea:focus, select:focus {
 }
 textarea { resize: vertical; }
 
-/* Verified badge — 12-point scalloped seal, X/Twitter exact shape */
+/* File inputs: DUYS control shell + a button-styled picker. */
+input[type=file] {
+  width: 100%; margin-top: 6px; padding: 10px 12px; border-radius: var(--radius-sm);
+  background: var(--input-bg); border: 1px dashed var(--border); color: var(--text-muted);
+  font-size: 14px; cursor: pointer;
+}
+input[type=file]:hover { border-color: var(--blue); }
+input[type=file]::file-selector-button,
+input[type=file]::-webkit-file-upload-button {
+  margin-right: 12px; padding: 8px 16px; border: 1px solid var(--border);
+  border-radius: 999px; background: var(--bg-elevated); color: var(--text);
+  font: inherit; font-weight: 700; font-size: 14px; cursor: pointer;
+}
+input[type=file]::file-selector-button:hover { background: var(--bg-hover); }
+
+/* Verified badge â€” 12-point scalloped seal, X/Twitter exact shape */
 .vbadge {
   display: inline-flex; align-items: center; justify-content: center;
   vertical-align: middle; margin-left: 2px; flex-shrink: 0;
@@ -153,7 +181,7 @@ textarea { resize: vertical; }
 .vbadge-gold  .vbadge-shape { fill: var(--gold); }
 .vbadge-grey  .vbadge-shape { fill: var(--grey-badge); }
 
-/* Brand logo (app icon) — responsive across the platform */
+/* Brand logo (app icon) â€” responsive across the platform */
 .brand-logo { border-radius: 22%; object-fit: cover; flex-shrink: 0; display: block;
   max-width: 100%; height: auto; aspect-ratio: 1 / 1; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
 .auth-logo { width: clamp(72px, 18vw, 104px) !important; height: auto !important;
@@ -167,7 +195,7 @@ textarea { resize: vertical; }
   border-radius: 999px;
 }
 
-/* ── Flash / Toast messages — modern floating toasts ── */
+/* â”€â”€ Flash / Toast messages â€” modern floating toasts â”€â”€ */
 .flashes {
   position: fixed; top: 16px; right: 16px; z-index: 9000;
   display: flex; flex-direction: column; gap: 10px;
@@ -295,7 +323,7 @@ textarea { resize: vertical; }
 @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: none; } }
 @keyframes shimmerMove { to { background-position: 200% 0; } }
 
-/* Staggered list entrance — apply .stagger to a container of children */
+/* Staggered list entrance â€” apply .stagger to a container of children */
 .stagger > * { animation: riseIn 0.4s cubic-bezier(.2,.7,.3,1) both; }
 .stagger > *:nth-child(1) { animation-delay: .02s; }
 .stagger > *:nth-child(2) { animation-delay: .06s; }
@@ -307,3 +335,4 @@ textarea { resize: vertical; }
 .stagger > *:nth-child(8) { animation-delay: .30s; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+

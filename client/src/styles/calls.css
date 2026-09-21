@@ -151,6 +151,8 @@ body.in-call { overflow: hidden; }
 .ic-decline { background: #f4212e; }
 .ic-accept { background: #00a884; }
 .ic-accept-pulse { animation: waPulse 1.4s ease-in-out infinite; }
+.ic-video { background: rgba(0,168,132,0.15); color: #00a884; border: 1px solid rgba(0,168,132,0.3); }
+.ic-voice { background: rgba(0,168,132,0.1); color: #00a884; border: 1px solid rgba(0,168,132,0.2); }
 @keyframes waPulse {
   0%,100% { box-shadow: 0 0 0 0 rgba(0,168,132,0.55); }
   50%      { box-shadow: 0 0 0 14px rgba(0,168,132,0); }

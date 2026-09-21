@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../auth";
 import { Avatar, Badge, Icon } from "../../components/Icon";
+import { PageError, PageLoading } from "../../components/PageState";
 import { PostCard, type Post } from "../../components/PostCard";
 
 export function ProfilePage() {
@@ -10,9 +11,16 @@ export function ProfilePage() {
   const { boot, refresh } = useAuth();
   const nav = useNavigate();
   const [data, setData] = useState<any>(null);
-  const load = () => api(`/api/u/${username}`).then(setData);
-  useEffect(() => { load(); }, [username]);
-  if (!data) return null;
+  const [err, setErr] = useState("");
+  const load = () => {
+    setErr("");
+    return api(`/api/u/${username}`)
+      .then((d) => { setData(d); setErr(""); })
+      .catch((ex) => setErr((ex as Error).message || "Could not load this profile."));
+  };
+  useEffect(() => { void load(); }, [username]);
+  if (err) return <PageError message={err} onRetry={() => void load()} />;
+  if (!data) return <PageLoading label="Loading profile…" />;
   const u = data.user;
   const mine = boot?.user?.username === u.username;
   return (

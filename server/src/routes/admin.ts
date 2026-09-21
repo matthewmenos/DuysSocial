@@ -3,6 +3,8 @@ import { prisma, getSetting, setSetting } from "../prisma.js";
 import { requireAdmin, publicUser, type AuthedRequest } from "../session.js";
 import { notify } from "../services/notify.js";
 import { creditPoints } from "../services/points.js";
+import { postAssetKeys } from "../services/posts.js";
+import { deleteFiles } from "../services/storage.js";
 import { config } from "../config.js";
 
 export const adminRouter = Router();
@@ -165,8 +167,11 @@ adminRouter.get("/posts", async (req, res) => {
 });
 
 adminRouter.post("/posts/:id/delete", async (req: AuthedRequest, res) => {
-  await prisma.post.delete({ where: { id: Number(req.params.id) } });
-  await log(req, "delete_post", "post", Number(req.params.id));
+  const id = Number(req.params.id);
+  const keys = await postAssetKeys(id);
+  await prisma.post.delete({ where: { id } });
+  await deleteFiles(keys);
+  await log(req, "delete_post", "post", id);
   res.json({ ok: true });
 });
 
@@ -279,7 +284,10 @@ adminRouter.get("/stories", async (_req, res) => {
   res.json({ stories: await prisma.story.findMany({ orderBy: { id: "desc" }, take: 50 }) });
 });
 adminRouter.post("/stories/:id/delete", async (req, res) => {
-  await prisma.story.delete({ where: { id: Number(req.params.id) } });
+  const story = await prisma.story.findUnique({ where: { id: Number(req.params.id) } });
+  if (!story) return res.status(404).json({ error: "not_found" });
+  await prisma.story.delete({ where: { id: story.id } });
+  await deleteFiles([story.mediaKey]);
   res.json({ ok: true });
 });
 adminRouter.get("/comments", async (_req, res) => {

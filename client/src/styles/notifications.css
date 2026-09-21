@@ -211,3 +211,6 @@
   max-width: 260px;
   line-height: 1.5;
 }
+
+/* ── Notification list wrapper (rows are .ig-notif) ── */
+.ig-notif-list { display: flex; flex-direction: column; }

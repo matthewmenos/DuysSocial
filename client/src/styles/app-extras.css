@@ -36,5 +36,14 @@
 .feed-topbar-search { display: flex; align-items: center; gap: 8px; background: var(--input-bg); border-radius: 999px; padding: 6px 12px; }
 .feed-topbar-search input { background: transparent; border: 0; color: inherit; outline: none; }
 .wlt-connect-form { display: flex; gap: 8px; margin-top: 16px; }
+.wlt-connected {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
 .wlt-tx-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
 

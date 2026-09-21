@@ -11,7 +11,11 @@
     "dev:server": "npm run dev -w server",
     "db:generate": "npm run prisma:generate -w server",
     "db:push": "npm run prisma:push -w server",
+    "db:generate:pg": "npm run db:generate:pg -w server",
+    "db:push:pg": "npm run db:push:pg -w server",
     "build": "npm run build -w server && npm run build -w client",
+    "build:prod": "npm run build:prod -w server",
+    "test": "npm test -w server",
     "start": "npm start -w server"
   }
 }

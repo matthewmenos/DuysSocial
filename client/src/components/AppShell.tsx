@@ -6,9 +6,10 @@ import { socket } from "../socket";
 import { Avatar, Badge, Icon } from "./Icon";
 import { Composer } from "./Composer";
 import { CallOverlay } from "./CallOverlay";
+import { PageLoading } from "./PageState";
 
 export function AppShell() {
-  const { boot, refresh, setTheme } = useAuth();
+  const { boot, refresh, loading, setTheme } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
   const [composer, setComposer] = useState(false);
@@ -23,7 +24,7 @@ export function AppShell() {
     }
   }, [boot, loc.pathname, nav]);
 
-  if (!boot) return <div className="auth-card-center">Loading…</div>;
+  if (!boot || loading) return <PageLoading label="Starting DUYS…" />;
   if (!user) return <Outlet />;
   const me = user;
 

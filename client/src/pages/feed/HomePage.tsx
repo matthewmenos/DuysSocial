@@ -4,6 +4,7 @@ import { api } from "../../api";
 import { useAuth } from "../../auth";
 import { Avatar, Badge, Icon } from "../../components/Icon";
 import { PostCard, type Post } from "../../components/PostCard";
+import { PageLoading } from "../../components/PageState";
 
 export function HomePage() {
   const { boot, refresh } = useAuth();
@@ -14,19 +15,20 @@ export function HomePage() {
   const [data, setData] = useState<{ posts: Post[]; myStory: { id: number }[]; otherStories: { id: number; mediaUrl: string; author?: { username: string; displayName: string; avatarUrl: string } }[]; suggestions: { username: string; displayName: string; avatarUrl: string; verifiedBadge: string }[] } | null>(null);
   const [newPosts, setNewPosts] = useState(0);
   const [showNewPostsBanner, setShowNewPostsBanner] = useState(false);
-  const topPostId = useRef<number | null>(null);
+  // State (not a ref) so the polling effect below starts once the first page loads.
+  const [topPostId, setTopPostId] = useState<number | null>(null);
   const storyFile = useRef<HTMLInputElement>(null);
   const load = () => api(`/api/feed?scope=${scope}`).then((d) => {
     setData(d);
-    if (d.posts?.length) topPostId.current = d.posts[0].id;
+    if (d.posts?.length) setTopPostId(d.posts[0].id);
   });
   useEffect(() => { load(); }, [scope]);
   // Poll for new posts every 30s
   useEffect(() => {
-    if (!topPostId.current) return;
+    if (topPostId == null) return;
     const interval = setInterval(async () => {
       try {
-        const r = await api(`/api/feed?scope=${scope}&since=${topPostId.current}`);
+        const r = await api(`/api/feed?scope=${scope}&since=${topPostId}`);
         if (r.newPosts > 0) {
           setNewPosts(r.newPosts);
           setShowNewPostsBanner(true);
@@ -34,13 +36,13 @@ export function HomePage() {
       } catch { /* ignore */ }
     }, 30000);
     return () => clearInterval(interval);
-  }, [scope]);
+  }, [scope, topPostId]);
   const handleNewPostsClick = useCallback(() => {
     setShowNewPostsBanner(false);
     setNewPosts(0);
     load();
   }, []);
-  if (!data || !boot?.user) return <p>Loading feed…</p>;
+  if (!data || !boot?.user) return <PageLoading label="Loading your feed…" />;
   const user = boot.user;
   return (
     <>

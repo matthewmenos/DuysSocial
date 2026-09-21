@@ -2,15 +2,64 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api";
 import { Icon } from "../../components/Icon";
+import { PageError, PageLoading } from "../../components/PageState";
 
 export function WalletPage() {
   const nav = useNavigate();
   const [data, setData] = useState<any>(null);
   const [hide, setHide] = useState(false);
-  const load = () => api("/api/wallet").then(setData);
-  useEffect(() => { load(); }, []);
-  if (!data) return null;
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [loadErr, setLoadErr] = useState("");
+  const load = () => api("/api/wallet")
+    .then((d) => { setData(d); setLoadErr(""); })
+    .catch((ex) => setLoadErr((ex as Error).message || "Could not load your wallet."));
+  useEffect(() => { void load(); }, []);
+  if (loadErr) return <PageError message={loadErr} onRetry={() => void load()} />;
+  if (!data) return <PageLoading label="Loading wallet…" />;
   const tokens = data.user.duysTokens;
+  const address: string | null = data.user.walletAddress || null;
+
+  /**
+   * Link a wallet properly: the server issues a one-time nonce and the wallet signs
+   * it, so the signature proves ownership of the address before it is stored.
+   */
+  async function connectWallet() {
+    setErr("");
+    setBusy(true);
+    try {
+      const eth = window.ethereum;
+      if (!eth) throw new Error("No wallet detected. Install MetaMask.");
+      const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
+      const account = accounts?.[0];
+      if (!account) throw new Error("No account selected.");
+      const { nonce } = await api("/api/wallet/connect/nonce", { method: "POST", body: "{}" });
+      const signature = (await eth.request({
+        method: "personal_sign",
+        params: [nonce, account],
+      })) as string;
+      await api("/api/wallet/connect/verify", {
+        method: "POST",
+        body: JSON.stringify({ address: account, signature }),
+      });
+      await load();
+    } catch (ex) {
+      setErr((ex as Error).message || "Could not connect wallet.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disconnectWallet() {
+    setErr("");
+    try {
+      await api("/api/wallet/disconnect", { method: "POST", body: "{}" });
+      await load();
+    } catch (ex) {
+      setErr((ex as Error).message);
+    }
+  }
+
   return (
     <>
       <div className="wlt-topbar">
@@ -35,17 +84,22 @@ export function WalletPage() {
         <div className="wlt-actions">
           <button className="wlt-action" onClick={() => nav("/wallet/swap")}><span className="wlt-action-icon wlt-action-solid"><Icon name="plus" size={20} /></span><span>Buy</span></button>
           <button className="wlt-action" onClick={() => nav("/wallet/swap")}><span className="wlt-action-icon wlt-action-solid"><Icon name="boost" size={20} /></span><span>Sell</span></button>
-          <button className="wlt-action" onClick={async () => { await api("/api/wallet/claim-tokens", { method: "POST", body: JSON.stringify({}) }); load(); }}><span className="wlt-action-icon wlt-action-outline"><Icon name="send" size={20} /></span><span>Claim</span></button>
+          <button className="wlt-action" onClick={() => nav("/wallet/claim")}><span className="wlt-action-icon wlt-action-outline"><Icon name="send" size={20} /></span><span>Claim</span></button>
         </div>
-        <form className="wlt-connect-form" onSubmit={async (e) => {
-          e.preventDefault();
-          const fd = new FormData(e.currentTarget);
-          await api("/api/wallet/connect/verify", { method: "POST", body: JSON.stringify({ address: fd.get("address") }) });
-          load();
-        }}>
-          <input name="address" placeholder="0x… wallet address" defaultValue={data.user.walletAddress} />
-          <button className="btn btn-primary btn-sm">Connect Wallet</button>
-        </form>
+        <div className="wlt-connect-form">
+          {address ? (
+            <>
+              <span className="wlt-connected">{address.slice(0, 6)}…{address.slice(-4)}</span>
+              <button className="btn btn-sm" disabled={busy} onClick={connectWallet}>Relink</button>
+              <button className="btn btn-sm btn-outline" onClick={disconnectWallet}>Disconnect</button>
+            </>
+          ) : (
+            <button className="btn btn-primary btn-sm" disabled={busy} onClick={connectWallet}>
+              {busy ? "Connecting…" : "Connect Wallet"}
+            </button>
+          )}
+        </div>
+        {err && <p className="flash flash-error">{err}</p>}
       </div>
       <div className="wlt-card" id="claim-history">
         <div className="wlt-card-title">Points</div>

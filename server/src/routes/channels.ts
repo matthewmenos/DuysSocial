@@ -14,16 +14,28 @@ function token() {
 }
 
 channelsRouter.get("/", requireAuth, async (req: AuthedRequest, res) => {
+  const q = String(req.query.q || "").trim();
   const mine = await prisma.channelSubscription.findMany({ where: { userId: req.user!.id } });
   const channels = await prisma.channel.findMany({
     where: { id: { in: mine.map((m) => m.channelId) } },
   });
+  // Include the viewer's role/mute state so the list rows can mirror the original.
+  const withRole = channels.map((c) => {
+    const sub = mine.find((m) => m.channelId === c.id);
+    return { ...c, role: sub?.role || null, isMuted: sub?.isMuted || false };
+  });
+  const joinedIds = new Set(mine.map((m) => m.channelId));
   const discover = await prisma.channel.findMany({
-    where: { isPrivate: false },
+    where: {
+      isPrivate: false,
+      ...(q
+        ? { OR: [{ name: { contains: q } }, { handle: { contains: q } }, { description: { contains: q } }] }
+        : {}),
+    },
     orderBy: { subscriberCount: "desc" },
     take: 30,
   });
-  res.json({ mine: channels, discover });
+  res.json({ mine: withRole, discover: discover.map((c) => ({ ...c, joined: joinedIds.has(c.id) })), q });
 });
 
 channelsRouter.post("/create", requireAuth, upload.single("avatar"), async (req: AuthedRequest, res) => {
@@ -65,12 +77,78 @@ channelsRouter.get("/c/:handle", requireAuth, async (req: AuthedRequest, res) =>
   });
   if (ch.isPrivate && !sub) return res.json({ channel: ch, gated: true });
   const posts = await prisma.post.findMany({ where: { channelId: ch.id }, orderBy: { id: "desc" }, take: 40 });
-  const serialized = [];
+  // Broadcast cards need per-emoji reaction counts; serializePost() doesn't
+  // include them (channel reactions live in their own table).
+  type PostShape = NonNullable<Awaited<ReturnType<typeof serializePost>>>;
+  type SerializedPost = PostShape & { reactions: { emoji: string; count: number; mine: boolean }[] };
+  const withReactions = async (post: PostShape): Promise<SerializedPost> => {
+    const reacts = await prisma.channelPostReaction.findMany({
+      where: { postId: post.id },
+      select: { emoji: true, userId: true },
+    });
+    const counts: Record<string, number> = {};
+    let mineEmoji = "";
+    for (const r of reacts) {
+      counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+      if (r.userId === req.user!.id) mineEmoji = r.emoji;
+    }
+    const reactions = Object.entries(counts).map(([emoji, count]) => ({ emoji, count, mine: emoji === mineEmoji }));
+    return { ...post, reactions };
+  };
+  const serialized: SerializedPost[] = [];
   for (const p of posts) {
     const s = await serializePost(p.id, req.user!.id);
-    if (s) serialized.push(s);
+    if (s) serialized.push(await withReactions(s));
   }
-  res.json({ channel: ch, role: sub?.role || null, muted: sub?.isMuted || false, posts: serialized });
+  // Pinned post
+  let pinned: SerializedPost | null = null;
+  if (ch.pinnedPostId) {
+    const ps = await serializePost(ch.pinnedPostId, req.user!.id);
+    if (ps) pinned = await withReactions(ps);
+  }
+  // Track views
+  void prisma.postView.create({ data: { postId: ch.pinnedPostId || serialized[0]?.id || 0, userId: req.user!.id } }).catch(() => {});
+  res.json({ channel: ch, role: sub?.role || null, muted: sub?.isMuted || false, subscribed: Boolean(sub), posts: serialized, pinned });
+});
+
+channelsRouter.post("/c/:handle/mute", requireAuth, async (req: AuthedRequest, res) => {
+  const ch = await prisma.channel.findUnique({ where: { handle: String(req.params.handle).toLowerCase() } });
+  if (!ch) return res.status(404).json({ error: "not_found" });
+  const sub = await prisma.channelSubscription.findUnique({
+    where: { channelId_userId: { channelId: ch.id, userId: req.user!.id } },
+  });
+  if (!sub) return res.status(403).json({ error: "not_subscribed" });
+  await prisma.channelSubscription.update({ where: { channelId_userId: { channelId: ch.id, userId: req.user!.id } }, data: { isMuted: !sub.isMuted } });
+  res.json({ ok: true });
+});
+
+channelsRouter.get("/c/:handle/info", requireAuth, async (req: AuthedRequest, res) => {
+  const ch = await prisma.channel.findUnique({ where: { handle: String(req.params.handle).toLowerCase() } });
+  if (!ch) return res.status(404).json({ error: "not_found" });
+  const sub = await prisma.channelSubscription.findUnique({
+    where: { channelId_userId: { channelId: ch.id, userId: req.user!.id } },
+  });
+  if (!sub || !["owner", "admin"].includes(sub.role)) return res.status(403).json({ error: "forbidden" });
+  const members = await prisma.channelSubscription.findMany({ where: { channelId: ch.id } });
+  const userIds = members.map((m) => m.userId);
+  const users = await prisma.user.findMany({ where: { id: { in: userIds } } });
+  res.json({
+    channel: ch, inviteToken: ch.inviteToken,
+    members: members.map((m) => ({ role: m.role, userId: m.userId, user: users.find((u) => u.id === m.userId) ? {
+      id: users.find((u) => u.id === m.userId)!.id,
+      username: users.find((u) => u.id === m.userId)!.username,
+      displayName: users.find((u) => u.id === m.userId)!.displayName,
+      avatarUrl: users.find((u) => u.id === m.userId)!.avatarUrl,
+    } : null })),
+  });
+});
+
+channelsRouter.post("/c/:handle/view/:postId", requireAuth, async (req: AuthedRequest, res) => {
+  const ch = await prisma.channel.findUnique({ where: { handle: String(req.params.handle).toLowerCase() } });
+  if (!ch) return res.status(404).json({ error: "not_found" });
+  const postId = Number(req.params.postId);
+  await prisma.postView.create({ data: { postId, userId: req.user!.id } }).catch(() => {});
+  res.json({ ok: true });
 });
 
 channelsRouter.post("/c/:handle/subscribe", requireAuth, async (req: AuthedRequest, res) => {

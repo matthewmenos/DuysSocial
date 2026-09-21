@@ -50,7 +50,34 @@ metaRouter.get("/notifications", requireAuth, async (req: AuthedRequest, res) =>
     orderBy: { id: "desc" },
     take: 50,
   });
-  res.json({ notifications: rows });
+  // Enrich with actor + post preview so the page can render the DUYS-style rows
+  // (avatar, kind badge, text, post thumbnail, unread dot) without N+1 requests.
+  const actorIds = [...new Set(rows.map((r) => r.actorId).filter((v): v is number => typeof v === "number"))];
+  const actors = await prisma.user.findMany({ where: { id: { in: actorIds } } });
+  const amap = Object.fromEntries(
+    actors.map((a) => [a.id, { username: a.username, displayName: a.displayName, avatarUrl: a.avatarUrl }]),
+  );
+  const postIds = [
+    ...new Set(rows.filter((r) => r.entityType === "post" && r.entityId).map((r) => r.entityId as number)),
+  ];
+  const posts = await prisma.post.findMany({ where: { id: { in: postIds } } });
+  const media = await prisma.media.findMany({ where: { postId: { in: postIds } } });
+  const pmap = Object.fromEntries(
+    posts.map((p) => {
+      const m = media.find((x) => x.postId === p.id);
+      return [
+        p.id,
+        { body: p.body, mediaUrl: m?.url || "", mediaKind: m?.kind || "" },
+      ];
+    }),
+  );
+  res.json({
+    notifications: rows.map((r) => ({
+      ...r,
+      actor: r.actorId ? amap[r.actorId] ?? null : null,
+      post: r.entityType === "post" && r.entityId ? pmap[r.entityId] ?? null : null,
+    })),
+  });
 });
 
 metaRouter.get("/notifications/tray", requireAuth, async (req: AuthedRequest, res) => {
@@ -68,15 +95,28 @@ metaRouter.post("/notifications/read", requireAuth, async (req: AuthedRequest, r
 });
 
 metaRouter.post("/push/subscribe", requireAuth, async (req: AuthedRequest, res) => {
-  const sub = req.body;
-  await prisma.pushSubscription.create({
-    data: {
-      userId: req.user!.id,
-      endpoint: String(sub.endpoint || ""),
-      p256dh: String(sub.keys?.p256dh || ""),
-      auth: String(sub.keys?.auth || ""),
-    },
+  const endpoint = String(req.body.endpoint || "");
+  if (!endpoint) return res.status(400).json({ error: "no_endpoint" });
+  const keys = {
+    p256dh: String(req.body.keys?.p256dh || ""),
+    auth: String(req.body.keys?.auth || ""),
+  };
+  // Upsert on endpoint: re-subscribing the same browser must not insert duplicates.
+  const existing = await prisma.pushSubscription.findFirst({
+    where: { userId: req.user!.id, endpoint },
   });
+  if (existing) {
+    await prisma.pushSubscription.update({ where: { id: existing.id }, data: keys });
+  } else {
+    await prisma.pushSubscription.create({ data: { userId: req.user!.id, endpoint, ...keys } });
+  }
+  res.json({ ok: true });
+});
+
+metaRouter.post("/push/unsubscribe", requireAuth, async (req: AuthedRequest, res) => {
+  const endpoint = String(req.body.endpoint || "");
+  if (!endpoint) return res.status(400).json({ error: "no_endpoint" });
+  await prisma.pushSubscription.deleteMany({ where: { userId: req.user!.id, endpoint } });
   res.json({ ok: true });
 });
 

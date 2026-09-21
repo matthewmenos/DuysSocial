@@ -773,3 +773,19 @@
   .wlt-metrics-item + .wlt-metrics-item { border-left: none; border-top: 1px solid var(--wlt-border); padding-left: 0; padding-top: 12px; }
   .earn-hero { flex-direction: column; gap: 18px; align-items: flex-start; }
 }
+
+/* ── Earn / Referral polish — classes the original left unstyled ── */
+.wallet-amount { font-size: 34px; font-weight: 800; letter-spacing: -1px; margin: 6px 0; }
+.earn-balance { text-align: center; }
+.earn-claim-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.earn-claim-header h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 16px; }
+.claim-stat-token { color: var(--blue); }
+.earn-claim-progress { margin-top: 12px; }
+.earn-claim-bar { height: 8px; border-radius: 999px; background: var(--bg-hover); overflow: hidden; }
+.earn-claim-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--blue), #6366f1); }
+.referral-card .ref-code-label { margin-top: 14px; font-size: 13px; color: var(--text-muted); }
+.ref-code-box { display: flex; gap: 10px; align-items: center; }
+.ref-code-box code { flex: 1; padding: 11px 14px; border-radius: var(--radius-sm); background: var(--input-bg); border: 1px solid var(--border); font-size: 13px; overflow-wrap: anywhere; }
+
+.earn-claim-card { position: relative; }
+

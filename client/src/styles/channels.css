@@ -679,3 +679,31 @@
 }
 .ch-verif-pending  { background: rgba(245,196,0,.12);  color: #c8a200; }
 .ch-verif-rejected { background: rgba(239,68,68,.12);  color: #ef4444; }
+
+/* ── Channel broadcast view additions (from view.html markup) ── */
+.bc-compose-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 10px; border-radius: 999px;
+  background: var(--blue); color: #fff; border: none; font-weight: 700;
+  cursor: pointer; margin: 8px;
+}
+.bc-compose-btn:hover { background: #0a7ad4; }
+.composer-closed .bc-compose-btn { justify-content: center; }
+.bc-react-btn {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  padding: 4px 6px; border-radius: 6px; display: inline-flex; align-items: center;
+  transition: color 0.15s; margin-left: auto;
+}
+.bc-react-btn:hover { color: var(--blue); }
+.bc-verified-seal {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; font-size: 10px;
+}
+.bc-view-count { font-weight: 600; color: var(--text); }
+.ch-invite-code { font-family: monospace; font-size: 13px; color: var(--text-muted); }
+.w-100 { width: 100% !important; }
+
+/* ── Mute button on channel view topbar ── */
+.bc-topbar-actions .ch-mute-btn.ch-muted { color: var(--text-muted); }
+.ch-mute-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; border-radius: 6px; }
+.ch-mute-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }

@@ -17,6 +17,7 @@ interface ClaimResult {
 
 export function ClaimDUYS() {
   const [points, setPoints] = useState<number | null>(null);
+  const [rules, setRules] = useState({ pointsPerToken: 10, minPoints: 100 });
   const [wallet, setWallet] = useState<WalletState>({ address: null, connecting: false, error: null });
   const [claiming, setClaiming] = useState(false);
   const [result, setResult] = useState<ClaimResult | null>(null);
@@ -25,7 +26,12 @@ export function ClaimDUYS() {
   const loadPoints = useCallback(async () => {
     try {
       const data = await api("/api/wallet");
-      setPoints(data.user.pointsBalance ?? data.user.points ?? 0);
+      // `points` is the authoritative balance (pointsBalance is a legacy column).
+      setPoints(data.user.points ?? 0);
+      setRules({
+        pointsPerToken: data.claim?.pointsPerToken ?? 10,
+        minPoints: data.claim?.minPoints ?? 100,
+      });
     } catch { /* not logged in */ }
   }, []);
 
@@ -57,22 +63,22 @@ export function ClaimDUYS() {
       setResult({ ok: true, txHash: data.txHash ?? null, tokens: data.tokens ?? 0, pointsSpent: data.pointsSpent ?? 0, to: data.to ?? wallet.address ?? "" });
       await loadPoints();
     } catch (err) {
-      const e = err as Error & { data?: { error?: string; detail?: string; min?: number; have?: number } };
+      const e = err as Error & { data?: { error?: string; detail?: string; min?: number; have?: number; max?: number } };
       const d = e.data;
       if (d?.error === "below_min") setError(`You need at least ${d.min} points. You have ${d.have}.`);
+      else if (d?.error === "daily_limit") setError(`Daily claim limit reached (${d.max ?? 1} per day). Try again tomorrow.`);
       else if (d?.error === "chain_failed") setError(`Chain failed: ${d.detail ?? "unknown"}. Points restored.`);
       else if (d?.error === "blockchain_disabled") setError("Blockchain rewards are temporarily disabled.");
       else if (d?.error === "bad_address") setError("Connect a valid wallet or provide a 0x address.");
+      else if (d?.error === "wallet_taken") setError("That wallet is already linked to another account.");
       else setError(e.message || "Claim failed. Try again.");
     } finally {
       setClaiming(false);
     }
   }, [wallet.address, loadPoints]);
 
-  const POINTS_PER_TOKEN = 10;
-  const MIN_POINTS = 100;
-  const estimatedTokens = points != null ? Math.floor(points / POINTS_PER_TOKEN) : 0;
-  const canClaim = points != null && points >= MIN_POINTS;
+  const estimatedTokens = points != null ? Math.floor(points / rules.pointsPerToken) : 0;
+  const canClaim = points != null && points >= rules.minPoints;
 
   return (
     <div className="claim-duys">
@@ -103,7 +109,7 @@ export function ClaimDUYS() {
           {wallet.error && <p className="claim-duys-error">{wallet.error}</p>}
         </div>
         <button className="btn btn-primary claim-duys-claim-btn" onClick={handleClaim} disabled={!canClaim || claiming}>
-          {claiming ? "Claiming…" : canClaim ? `Claim ${estimatedTokens} DUYS` : `Need ${MIN_POINTS} points to claim`}
+          {claiming ? "Claiming…" : canClaim ? `Claim ${estimatedTokens} DUYS` : `Need ${rules.minPoints} points to claim`}
         </button>
         {result && result.ok && (
           <div className="claim-duys-success">

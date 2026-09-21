@@ -6,12 +6,15 @@ dist
 server/uploads
 server/prisma/*.db
 server/prisma/*.db-journal
+server/prisma/schema.postgres.prisma
 server/test.db
 server/test-out.log
 client/dist
+client/tsconfig.tsbuildinfo
 face-worker/__pycache__
 .venv
-scripts
-react_node_rewrite_3a984fe1.plan.md
+# Root-only scratch dirs (leading slash keeps server/scripts + server/test tracked).
+/scripts
+/react_node_rewrite_3a984fe1.plan.md
 TODO.md
-test
+/test

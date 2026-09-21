@@ -4,6 +4,7 @@ import { AppShell } from "./components/AppShell";
 import {
   ChannelView,
   ChannelsPage,
+  ClaimDUYS,
   EarnPage,
   ExplorePage,
   HomePage,
@@ -118,6 +119,7 @@ export function App() {
         <Route path="/messages/start/:username" element={<StartDm />} />
         <Route path="/wallet" element={<WalletPage />} />
         <Route path="/wallet/swap" element={<SwapPage />} />
+        <Route path="/wallet/claim" element={<ClaimDUYS />} />
         <Route path="/earn" element={<EarnPage />} />
         <Route path="/referral" element={<ReferralPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
