@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../auth";
 import { Avatar, Icon } from "../../components/Icon";
+import { BusyButton } from "../../components/BusyButton";
+import { useBusy } from "../../components/useBusy";
 import { PostCard, type Post } from "../../components/PostCard";
 import { PageLoading } from "../../components/PageState";
 
@@ -22,6 +24,7 @@ export function PostDetail() {
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [body, setBody] = useState("");
+  const { busy: replying, run: runReply } = useBusy();
 
   const load = async () => {
     if (!id) return;
@@ -35,13 +38,17 @@ export function PostDetail() {
 
   useEffect(() => { void load(); }, [id]);
 
-  async function submitComment(e: FormEvent<HTMLFormElement>) {
+  function submitComment(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const text = body.trim();
     if (!text) return;
-    await api(`/api/posts/${id}/comment`, { method: "POST", body: JSON.stringify({ body: text }) });
-    setBody("");
-    await load();
+    void runReply(async () => {
+      try {
+        await api(`/api/posts/${id}/comment`, { method: "POST", body: JSON.stringify({ body: text }) });
+        setBody("");
+        await load();
+      } catch { /* keep the draft so the reply isn't lost */ }
+    });
   }
 
   async function toggleLike(commentId: number) {
@@ -71,7 +78,7 @@ export function PostDetail() {
           placeholder="Post your reply"
           maxLength={500}
         />
-        <button className="btn btn-primary" type="submit" disabled={!body.trim()}>Reply</button>
+        <BusyButton className="btn btn-primary" type="submit" busy={replying} busyLabel="Replying…" disabled={!body.trim()}>Reply</BusyButton>
       </form>
 
       <div className="comments">

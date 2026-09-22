@@ -460,6 +460,21 @@
   width: 13px; height: 13px; border-radius: 50%; background: var(--blue);
   box-shadow: 0 0 12px var(--blue-glow);
   animation: pageCore 1.3s ease-in-out infinite;
+
+/* Busy buttons: inline mini-spinner that appears while the action runs. */
+.btn { position: relative; }
+.btn-spinner {
+  width: 1em; height: 1em; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid currentColor; border-top-color: transparent; opacity: 0.85;
+  animation: btnSpin 0.7s linear infinite;
+}
+@keyframes btnSpin { to { transform: rotate(360deg); } }
+.btn.is-busy { cursor: progress; }
+.btn.is-busy:active { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .btn-spinner { animation-duration: 1.6s; }
+}
+
 }
 .page-loading-ripple {
   position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--blue);

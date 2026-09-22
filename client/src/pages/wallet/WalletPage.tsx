@@ -2,13 +2,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api";
 import { Icon } from "../../components/Icon";
+import { BusyButton } from "../../components/BusyButton";
+import { useBusy } from "../../components/useBusy";
 import { PageError, PageLoading } from "../../components/PageState";
 
 export function WalletPage() {
   const nav = useNavigate();
   const [data, setData] = useState<any>(null);
   const [hide, setHide] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const { busy: linking, run: runLink } = useBusy();
+  const { busy: unlinking, run: runUnlink } = useBusy();
   const [err, setErr] = useState("");
   const [loadErr, setLoadErr] = useState("");
   const load = () => api("/api/wallet")
@@ -24,40 +27,41 @@ export function WalletPage() {
    * Link a wallet properly: the server issues a one-time nonce and the wallet signs
    * it, so the signature proves ownership of the address before it is stored.
    */
-  async function connectWallet() {
+  function connectWallet() {
     setErr("");
-    setBusy(true);
-    try {
-      const eth = window.ethereum;
-      if (!eth) throw new Error("No wallet detected. Install MetaMask.");
-      const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
-      const account = accounts?.[0];
-      if (!account) throw new Error("No account selected.");
-      const { nonce } = await api("/api/wallet/connect/nonce", { method: "POST", body: "{}" });
-      const signature = (await eth.request({
-        method: "personal_sign",
-        params: [nonce, account],
-      })) as string;
-      await api("/api/wallet/connect/verify", {
-        method: "POST",
-        body: JSON.stringify({ address: account, signature }),
-      });
-      await load();
-    } catch (ex) {
-      setErr((ex as Error).message || "Could not connect wallet.");
-    } finally {
-      setBusy(false);
-    }
+    void runLink(async () => {
+      try {
+        const eth = window.ethereum;
+        if (!eth) throw new Error("No wallet detected. Install MetaMask.");
+        const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
+        const account = accounts?.[0];
+        if (!account) throw new Error("No account selected.");
+        const { nonce } = await api("/api/wallet/connect/nonce", { method: "POST", body: "{}" });
+        const signature = (await eth.request({
+          method: "personal_sign",
+          params: [nonce, account],
+        })) as string;
+        await api("/api/wallet/connect/verify", {
+          method: "POST",
+          body: JSON.stringify({ address: account, signature }),
+        });
+        await load();
+      } catch (ex) {
+        setErr((ex as Error).message || "Could not connect wallet.");
+      }
+    });
   }
 
-  async function disconnectWallet() {
+  function disconnectWallet() {
     setErr("");
-    try {
-      await api("/api/wallet/disconnect", { method: "POST", body: "{}" });
-      await load();
-    } catch (ex) {
-      setErr((ex as Error).message);
-    }
+    void runUnlink(async () => {
+      try {
+        await api("/api/wallet/disconnect", { method: "POST", body: "{}" });
+        await load();
+      } catch (ex) {
+        setErr((ex as Error).message);
+      }
+    });
   }
 
   return (
@@ -90,13 +94,11 @@ export function WalletPage() {
           {address ? (
             <>
               <span className="wlt-connected">{address.slice(0, 6)}…{address.slice(-4)}</span>
-              <button className="btn btn-sm" disabled={busy} onClick={connectWallet}>Relink</button>
-              <button className="btn btn-sm btn-outline" onClick={disconnectWallet}>Disconnect</button>
+              <BusyButton className="btn btn-sm" busy={linking} busyLabel="Relinking…" onClick={connectWallet}>Relink</BusyButton>
+              <BusyButton className="btn btn-sm btn-outline" busy={unlinking} busyLabel="Disconnecting…" onClick={disconnectWallet}>Disconnect</BusyButton>
             </>
           ) : (
-            <button className="btn btn-primary btn-sm" disabled={busy} onClick={connectWallet}>
-              {busy ? "Connecting…" : "Connect Wallet"}
-            </button>
+            <BusyButton className="btn btn-primary btn-sm" busy={linking} busyLabel="Connecting…" onClick={connectWallet}>Connect Wallet</BusyButton>
           )}
         </div>
         {err && <p className="flash flash-error">{err}</p>}

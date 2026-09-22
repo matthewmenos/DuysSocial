@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../auth";
 import { Icon } from "../../components/Icon";
+import { BusyButton } from "../../components/BusyButton";
+import { useBusy } from "../../components/useBusy";
 import { PageLoading } from "../../components/PageState";
 
 type Me = {
@@ -30,6 +32,14 @@ export function SettingsPage() {
   const [usernameHint, setUsernameHint] = useState("");
   const [twofa, setTwofa] = useState<{ secret: string; qr: string } | null>(null);
   const [twofaCode, setTwofaCode] = useState("");
+  const { busy: savingProfile, run: runProfile } = useBusy();
+  const { busy: savingMessaging, run: runMessaging } = useBusy();
+  const { busy: starting2fa, run: runStart2fa } = useBusy();
+  const { busy: confirming2fa, run: runConfirm2fa } = useBusy();
+  const { busy: disabling2fa, run: runDisable2fa } = useBusy();
+  const { busy: enablingPush, run: runPush } = useBusy();
+  const { busy: savingRingtone, run: runRingtone } = useBusy();
+  const { busy: deletingAccount, run: runDelete } = useBusy();
   const ringInput = useRef<HTMLInputElement>(null);
   const ringAudio = useRef<HTMLAudioElement | null>(null);
 
@@ -39,31 +49,33 @@ export function SettingsPage() {
 
   const say = (kind: "success" | "error", text: string) => setFlash({ kind, text });
 
-  async function saveProfile(e: FormEvent<HTMLFormElement>) {
+  function saveProfile(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    try {
-      // Username is part of the same form in the original; only POST it when changed.
-      const newUsername = String(fd.get("username") || "").trim().replace(/^@/, "").toLowerCase();
-      if (newUsername && me && newUsername !== me.username) {
-        const d = await api("/api/settings/username", { method: "POST", body: JSON.stringify({ username: newUsername }) });
-        setMe(d.user);
+    void runProfile(async () => {
+      try {
+        // Username is part of the same form in the original; only POST it when changed.
+        const newUsername = String(fd.get("username") || "").trim().replace(/^@/, "").toLowerCase();
+        if (newUsername && me && newUsername !== me.username) {
+          const d = await api("/api/settings/username", { method: "POST", body: JSON.stringify({ username: newUsername }) });
+          setMe(d.user);
+        }
+        await api("/api/settings", {
+          method: "POST",
+          body: JSON.stringify({
+            displayName: String(fd.get("displayName") || ""),
+            bio: String(fd.get("bio") || ""),
+            location: String(fd.get("location") || ""),
+            website: String(fd.get("website") || ""),
+          }),
+        });
+        await load();
+        await refresh();
+        say("success", "Profile updated.");
+      } catch (ex) {
+        say("error", (ex as Error).message);
       }
-      await api("/api/settings", {
-        method: "POST",
-        body: JSON.stringify({
-          displayName: String(fd.get("displayName") || ""),
-          bio: String(fd.get("bio") || ""),
-          location: String(fd.get("location") || ""),
-          website: String(fd.get("website") || ""),
-        }),
-      });
-      await load();
-      await refresh();
-      say("success", "Profile updated.");
-    } catch (ex) {
-      say("error", (ex as Error).message);
-    }
+    });
   }
 
   async function checkUsername(value: string) {
@@ -76,82 +88,94 @@ export function SettingsPage() {
     }
   }
 
-  async function saveMessaging(e: FormEvent<HTMLFormElement>) {
+  function saveMessaging(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    try {
-      await api("/api/settings", {
-        method: "POST",
-        body: JSON.stringify({
-          whoCanDm: String(fd.get("whoCanDm") || "everyone"),
-          showOnline: fd.get("showOnline") === "on",
-          showLastSeen: fd.get("showLastSeen") === "on",
-        }),
-      });
-      await load();
-      say("success", "Messaging preferences saved.");
-    } catch (ex) {
-      say("error", (ex as Error).message);
-    }
+    void runMessaging(async () => {
+      try {
+        await api("/api/settings", {
+          method: "POST",
+          body: JSON.stringify({
+            whoCanDm: String(fd.get("whoCanDm") || "everyone"),
+            showOnline: fd.get("showOnline") === "on",
+            showLastSeen: fd.get("showLastSeen") === "on",
+          }),
+        });
+        await load();
+        say("success", "Messaging preferences saved.");
+      } catch (ex) {
+        say("error", (ex as Error).message);
+      }
+    });
   }
 
-  async function start2fa() {
-    try {
-      const d = await api("/api/auth/2fa/setup");
-      setTwofa({ secret: d.secret, qr: d.qr });
-    } catch (ex) {
-      say("error", (ex as Error).message);
-    }
+  function start2fa() {
+    void runStart2fa(async () => {
+      try {
+        const d = await api("/api/auth/2fa/setup");
+        setTwofa({ secret: d.secret, qr: d.qr });
+      } catch (ex) {
+        say("error", (ex as Error).message);
+      }
+    });
   }
 
-  async function confirm2fa(e: FormEvent<HTMLFormElement>) {
+  function confirm2fa(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!twofa) return;
-    try {
-      await api("/api/auth/2fa/enable", { method: "POST", body: JSON.stringify({ secret: twofa.secret, token: twofaCode }) });
-      setTwofa(null);
-      setTwofaCode("");
-      await load();
-      say("success", "Two-factor authentication enabled.");
-    } catch (ex) {
-      say("error", (ex as Error).message);
-    }
-  }
-
-  async function disable2fa() {
-    try {
-      await api("/api/auth/2fa/disable", { method: "POST", body: "{}" });
-      await load();
-      say("success", "Two-factor authentication disabled.");
-    } catch (ex) {
-      say("error", (ex as Error).message);
-    }
-  }
-
-  async function enablePush() {
-    try {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-        throw new Error("Push notifications are not supported in this browser.");
+    void runConfirm2fa(async () => {
+      try {
+        await api("/api/auth/2fa/enable", { method: "POST", body: JSON.stringify({ secret: twofa.secret, token: twofaCode }) });
+        setTwofa(null);
+        setTwofaCode("");
+        await load();
+        say("success", "Two-factor authentication enabled.");
+      } catch (ex) {
+        say("error", (ex as Error).message);
       }
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: boot?.vapidPublic });
-      await api("/api/push/subscribe", { method: "POST", body: JSON.stringify(sub.toJSON()) });
-      say("success", "Push notifications enabled.");
-    } catch (ex) {
-      say("error", (ex as Error).message);
-    }
+    });
   }
 
-  async function uploadRingtone(file: File) {
+  function disable2fa() {
+    void runDisable2fa(async () => {
+      try {
+        await api("/api/auth/2fa/disable", { method: "POST", body: "{}" });
+        await load();
+        say("success", "Two-factor authentication disabled.");
+      } catch (ex) {
+        say("error", (ex as Error).message);
+      }
+    });
+  }
+
+  function enablePush() {
+    void runPush(async () => {
+      try {
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+          throw new Error("Push notifications are not supported in this browser.");
+        }
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: boot?.vapidPublic });
+        await api("/api/push/subscribe", { method: "POST", body: JSON.stringify(sub.toJSON()) });
+        say("success", "Push notifications enabled.");
+      } catch (ex) {
+        say("error", (ex as Error).message);
+      }
+    });
+  }
+
+  function uploadRingtone(file: File) {
     const fd = new FormData();
     fd.append("file", file);
-    try {
-      const d = await api("/api/settings/ringtone", { method: "POST", body: fd });
-      setMe(d.user);
-      say("success", "Ringtone uploaded.");
-    } catch (ex) {
-      say("error", (ex as Error).message);
-    }
+    void runRingtone(async () => {
+      try {
+        const d = await api("/api/settings/ringtone", { method: "POST", body: fd });
+        setMe(d.user);
+        say("success", "Ringtone uploaded.");
+      } catch (ex) {
+        say("error", (ex as Error).message);
+      }
+    });
   }
 
   function previewRingtone() {
@@ -162,21 +186,29 @@ export function SettingsPage() {
     void audio.play().catch(() => {});
   }
 
-  async function removeRingtone() {
-    try {
-      await api("/api/settings/ringtone", { method: "DELETE" });
-      await load();
-      say("success", "Ringtone removed.");
-    } catch (ex) {
-      say("error", (ex as Error).message);
-    }
+  function removeRingtone() {
+    void runRingtone(async () => {
+      try {
+        await api("/api/settings/ringtone", { method: "DELETE" });
+        await load();
+        say("success", "Ringtone removed.");
+      } catch (ex) {
+        say("error", (ex as Error).message);
+      }
+    });
   }
 
-  async function deleteAccount() {
+  function deleteAccount() {
     if (!window.confirm("This permanently deletes your account, posts and all media. This cannot be undone.")) return;
-    await api("/api/settings/delete", { method: "POST", body: "{}" });
-    await refresh();
-    nav("/auth/login");
+    void runDelete(async () => {
+      try {
+        await api("/api/settings/delete", { method: "POST", body: "{}" });
+        await refresh();
+        nav("/auth/login");
+      } catch (ex) {
+        say("error", (ex as Error).message);
+      }
+    });
   }
 
   async function toggleTheme() {
@@ -249,7 +281,7 @@ export function SettingsPage() {
               <input className="settings-input settings-input-prefixed" type="url" id="s-website" name="website" defaultValue={me.website} placeholder="https://yoursite.com" />
             </div>
           </div>
-          <button className="btn btn-primary settings-save-btn" type="submit">Save changes</button>
+          <BusyButton className="btn btn-primary settings-save-btn" type="submit" busy={savingProfile} busyLabel="Saving…">Save changes</BusyButton>
         </form>
       </div>
 
@@ -262,9 +294,9 @@ export function SettingsPage() {
             <span className="settings-row-sub">Protect your account with a TOTP code.</span>
           </div>
           {me.twofaEnabled ? (
-            <button className="btn btn-sm btn-danger" onClick={disable2fa}>Disable 2FA</button>
+            <BusyButton className="btn btn-sm btn-danger" busy={disabling2fa} busyLabel="Disabling…" onClick={disable2fa}>Disable 2FA</BusyButton>
           ) : (
-            <button className="btn btn-sm btn-primary" onClick={start2fa}>Enable 2FA</button>
+            <BusyButton className="btn btn-sm btn-primary" busy={starting2fa} busyLabel="Starting…" onClick={start2fa}>Enable 2FA</BusyButton>
           )}
         </div>
         {twofa && (
@@ -274,7 +306,7 @@ export function SettingsPage() {
             <p className="twofa-secret">{twofa.secret}</p>
             <form className="settings-form" onSubmit={confirm2fa}>
               <input className="otp-input" inputMode="numeric" maxLength={6} value={twofaCode} onChange={(e) => setTwofaCode(e.target.value)} placeholder="123456" />
-              <button className="btn btn-primary settings-save-btn" type="submit">Verify &amp; enable</button>
+              <BusyButton className="btn btn-primary settings-save-btn" type="submit" busy={confirming2fa} busyLabel="Verifying…">Verify &amp; enable</BusyButton>
             </form>
           </div>
         )}
@@ -288,7 +320,7 @@ export function SettingsPage() {
             <span className="settings-row-title">Push notifications</span>
             <span className="settings-row-sub">Alerts for likes, replies, tips and messages.</span>
           </div>
-          <button className="btn btn-sm btn-primary" onClick={enablePush}><Icon name="bell" size={16} /> Enable</button>
+          <BusyButton className="btn btn-sm btn-primary" busy={enablingPush} busyLabel="Enabling…" onClick={enablePush}><Icon name="bell" size={16} /> Enable</BusyButton>
         </div>
       </div>
 
@@ -329,7 +361,7 @@ export function SettingsPage() {
               <span className="toggle-track"><span className="toggle-thumb" /></span>
             </label>
           </div>
-          <button className="btn btn-primary settings-save-btn" type="submit">Save</button>
+          <BusyButton className="btn btn-primary settings-save-btn" type="submit" busy={savingMessaging} busyLabel="Saving…">Save</BusyButton>
         </form>
       </div>
 
@@ -356,7 +388,7 @@ export function SettingsPage() {
             {me.ringtoneUrl && (
               <>
                 <button className="btn btn-sm" onClick={previewRingtone}>Preview</button>
-                <button className="btn btn-sm btn-danger" onClick={removeRingtone}>Remove</button>
+                <BusyButton className="btn btn-sm btn-danger" busy={savingRingtone} busyLabel="Removing…" onClick={removeRingtone}>Remove</BusyButton>
               </>
             )}
           </div>
@@ -385,9 +417,9 @@ export function SettingsPage() {
             <span className="settings-row-title">Delete account</span>
             <span className="settings-row-sub">Permanently removes your data and all media.</span>
           </div>
-          <button type="button" className="btn btn-sm btn-danger" onClick={deleteAccount}>
+          <BusyButton type="button" className="btn btn-sm btn-danger" busy={deletingAccount} busyLabel="Deleting…" onClick={deleteAccount}>
             <Icon name="trash" size={15} /> Delete
-          </button>
+          </BusyButton>
         </div>
       </div>
     </>

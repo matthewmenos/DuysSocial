@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 import { Icon } from "./Icon";
+import { BusyButton } from "./BusyButton";
 
 export function Composer({
   onClose,
@@ -75,7 +76,7 @@ export function Composer({
         </label>
         {exclusive && <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Unlock price $DUYS" />}
         {err && <p className="flash flash-error">{err}</p>}
-        <button className="btn btn-primary btn-block" disabled={busy} onClick={submit}>{busy ? "Posting…" : "Post"}</button>
+        <BusyButton className="btn btn-primary btn-block" type="submit" busy={busy} busyLabel="Posting…" onClick={submit}>Post</BusyButton>
       </div>
     </div>
   );

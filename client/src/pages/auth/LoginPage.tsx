@@ -3,6 +3,8 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../auth";
 import { PostCard, type Post } from "../../components/PostCard";
+import { PasswordField } from "../../components/PasswordField";
+import { BusyButton } from "../../components/BusyButton";
 
 export function LoginPage() {
   const { boot, refresh } = useAuth();
@@ -13,10 +15,19 @@ export function LoginPage() {
   const [twofa, setTwofa] = useState(false);
   const [code, setCode] = useState("");
   const ref = params.get("ref") || "";
+  const [loginPassword, setLoginPassword] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirm, setSignupConfirm] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [registerBusy, setRegisterBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const [twofaBusy, setTwofaBusy] = useState(false);
 
   async function login(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    setErr("");
+    setLoginBusy(true);
     try {
       const data = await api("/api/auth/login", {
         method: "POST",
@@ -26,10 +37,14 @@ export function LoginPage() {
       await refresh();
       nav("/");
     } catch (ex) { setErr((ex as Error).message); }
+    finally { setLoginBusy(false); }
   }
   async function register(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    if (signupPassword !== signupConfirm) { setErr("Passwords do not match."); return; }
+    setErr("");
+    setRegisterBusy(true);
     try {
       await api("/api/auth/register", {
         method: "POST",
@@ -45,6 +60,30 @@ export function LoginPage() {
       await refresh();
       nav("/");
     } catch (ex) { setErr((ex as Error).message); }
+    finally { setRegisterBusy(false); }
+  }
+  async function continueWithGoogle() {
+    setErr("");
+    setGoogleBusy(true);
+    try {
+      const { url } = await api("/api/auth/google");
+      window.location.href = url;
+    } catch (ex) {
+      setErr((ex as Error).message);
+      setGoogleBusy(false);
+    }
+  }
+  async function verifyTwofa() {
+    if (!code.trim()) return;
+    setErr("");
+    setTwofaBusy(true);
+    try {
+      await api("/api/auth/2fa/verify", { method: "POST", body: JSON.stringify({ token: code }) });
+      await refresh(); nav("/");
+    } catch (ex) {
+      setErr((ex as Error).message);
+      setTwofaBusy(false);
+    }
   }
 
   if (twofa) {
@@ -53,10 +92,8 @@ export function LoginPage() {
         <div className="auth-card twofa-card">
           <h2>Two-factor</h2>
           <input className="otp-input" value={code} onChange={(e) => setCode(e.target.value)} />
-          <button className="btn btn-primary" onClick={async () => {
-            await api("/api/auth/2fa/verify", { method: "POST", body: JSON.stringify({ token: code }) });
-            await refresh(); nav("/");
-          }}>Verify</button>
+          {err && <div className="flash flash-error">{err}</div>}
+          <BusyButton className="btn btn-primary" busy={twofaBusy} busyLabel="Verifying…" onClick={verifyTwofa}>Verify</BusyButton>
         </div>
       </div>
     );
@@ -79,18 +116,15 @@ export function LoginPage() {
         {err && <div className="flash flash-error">{err}</div>}
         {boot?.googleEnabled && (
           <>
-            <button className="btn btn-google btn-block" onClick={async () => {
-              const { url } = await api("/api/auth/google");
-              window.location.href = url;
-            }}>Continue with Google</button>
+            <BusyButton className="btn btn-google btn-block" busy={googleBusy} busyLabel="Opening Google…" onClick={continueWithGoogle}>Continue with Google</BusyButton>
             <div className="auth-or"><span>or</span></div>
           </>
         )}
         {tab === "login" ? (
           <form className="auth-form" onSubmit={login}>
             <div className="field"><label>Email or username</label><input name="email" required /></div>
-            <div className="field"><label>Password</label><input name="password" type="password" required /></div>
-            <button className="btn btn-primary btn-block">Log in</button>
+            <PasswordField label="Password" name="password" value={loginPassword} onChange={setLoginPassword} autoComplete="current-password" required />
+            <BusyButton className="btn btn-primary btn-block" type="submit" busy={loginBusy} busyLabel="Logging in…">Log in</BusyButton>
           </form>
         ) : (
           <form className="auth-form" onSubmit={register}>
@@ -99,11 +133,11 @@ export function LoginPage() {
               <div className="field"><label>Username</label><input name="username" required minLength={3} /></div>
             </div>
             <div className="field"><label>Email</label><input name="email" type="email" required /></div>
-            <div className="field"><label>Password</label><input name="password" type="password" minLength={8} required /></div>
-            <div className="field"><label>Confirm</label><input name="confirmPassword" type="password" required /></div>
+            <PasswordField label="Password" name="password" value={signupPassword} onChange={setSignupPassword} autoComplete="new-password" minLength={8} meter required />
+            <PasswordField label="Confirm" name="confirmPassword" value={signupConfirm} onChange={setSignupConfirm} autoComplete="new-password" matchText={signupPassword} matchEmptyText="Re-enter the password above." required />
             <div className="field"><label>Referral</label><input name="ref" defaultValue={ref} /></div>
             <label className="checkbox-label"><input type="checkbox" required /> Agree to <Link to="/legal/terms">Terms</Link></label>
-            <button className="btn btn-primary btn-block">Create account</button>
+            <BusyButton className="btn btn-primary btn-block" type="submit" busy={registerBusy} busyLabel="Creating account…">Create account</BusyButton>
           </form>
         )}
       </div>

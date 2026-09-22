@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api";
 import { Avatar, Icon } from "../../components/Icon";
+import { BusyButton } from "../../components/BusyButton";
+import { useBusy } from "../../components/useBusy";
 import { PageLoading } from "../../components/PageState";
 
 type Channel = {
@@ -25,31 +27,38 @@ export function ChannelsPage() {
   const [avatarName, setAvatarName] = useState("");
   const [preview, setPreview] = useState("");
   const [err, setErr] = useState("");
+  const { busy: creating, run: runCreate } = useBusy();
+  const { busy: joining, run: runJoin } = useBusy();
   const avatarInput = useRef<HTMLInputElement>(null);
 
   const load = (term = "") => api(`/api/channels${term ? `?q=${encodeURIComponent(term)}` : ""}`).then(setData).catch(() => {});
   useEffect(() => { void load(); }, []);
 
-  async function create(e: FormEvent<HTMLFormElement>) {
+  function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErr("");
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const avatar = avatarInput.current?.files?.[0];
     if (avatar) fd.append("avatar", avatar);
-    try {
-      await api("/api/channels/create", { method: "POST", body: fd });
-      setDrawer(false);
-      setPreview("");
-      setAvatarName("");
-      await load(q);
-    } catch (ex) {
-      setErr((ex as Error).message);
-    }
+    void runCreate(async () => {
+      try {
+        await api("/api/channels/create", { method: "POST", body: fd });
+        setDrawer(false);
+        setPreview("");
+        setAvatarName("");
+        await load(q);
+      } catch (ex) {
+        setErr((ex as Error).message);
+      }
+    });
   }
 
-  async function subscribe(handle: string) {
-    await api(`/api/channels/c/${handle}/subscribe`, { method: "POST", body: "{}" }).catch(() => {});
-    await load(q);
+  function subscribe(handle: string) {
+    void runJoin(async () => {
+      await api(`/api/channels/c/${handle}/subscribe`, { method: "POST", body: "{}" }).catch(() => {});
+      await load(q);
+    });
   }
 
   if (!data) return <PageLoading label="Loading channels…" />;
@@ -122,7 +131,7 @@ export function ChannelsPage() {
               </div>
 
               {err && <p className="flash flash-error">{err}</p>}
-              <button className="btn btn-primary btn-block" type="submit">Create channel</button>
+              <BusyButton className="btn btn-primary btn-block" type="submit" busy={creating} busyLabel="Creating…">Create channel</BusyButton>
             </form>
           </div>
         </div>
@@ -194,12 +203,14 @@ export function ChannelsPage() {
                   </div>
                 </div>
               </Link>
-              <button
+              <BusyButton
                 className={`btn btn-sm ${ch.joined ? "ch-card-leave-btn btn-subscribed" : "btn-primary ch-card-join-btn"}`}
-                onClick={() => void subscribe(ch.handle)}
+                busy={joining}
+                busyLabel={ch.joined ? "Leaving…" : "Joining…"}
+                onClick={() => subscribe(ch.handle)}
               >
                 {ch.joined ? "Joined" : "Join"}
-              </button>
+              </BusyButton>
             </div>
           ))}
         </div>

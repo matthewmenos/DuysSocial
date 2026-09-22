@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../auth";
 import { Icon } from "../../components/Icon";
+import { BusyButton } from "../../components/BusyButton";
+import { useBusy } from "../../components/useBusy";
 import { PageError, PageLoading } from "../../components/PageState";
 
 type Listing = {
@@ -22,7 +24,8 @@ export function ShopPage() {
   const [data, setData] = useState<{ seller: { username: string; displayName: string }; listings: Listing[]; owned: number[] } | null>(null);
   const [loadErr, setLoadErr] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { busy: creating, run: runCreate } = useBusy();
+  const { busy: buying, run: runBuy } = useBusy();
   const fileInput = useRef<HTMLInputElement>(null);
 
   const load = () => api(`/api/shop/${username}`)
@@ -36,34 +39,36 @@ export function ShopPage() {
   const canSell = isSelf && Boolean(boot.user.verifiedBadge);
   const fmt = (p: number) => (p > 0 ? `${Number(p).toFixed(4)} DUYS` : "Free");
 
-  async function createListing(e: FormEvent<HTMLFormElement>) {
+  function createListing(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!file) return;
-    setBusy(true);
-    try {
-      const fd = new FormData(e.currentTarget);
-      fd.append("file", file);
-      await api(`/api/shop/${username}/create`, { method: "POST", body: fd });
-      (e.target as HTMLFormElement).reset();
-      setFile(null);
-      if (fileInput.current) fileInput.current.value = "";
-      await load();
-    } catch (ex) {
-      window.alert((ex as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    const form = e.currentTarget;
+    void runCreate(async () => {
+      try {
+        const fd = new FormData(form);
+        fd.append("file", file);
+        await api(`/api/shop/${username}/create`, { method: "POST", body: fd });
+        form.reset();
+        setFile(null);
+        if (fileInput.current) fileInput.current.value = "";
+        await load();
+      } catch (ex) {
+        window.alert((ex as Error).message);
+      }
+    });
   }
 
-  async function buyListing(id: number) {
-    try {
-      const r = await api(`/api/shop/listings/${id}/buy`, { method: "POST", body: "{}" });
-      const fileUrl = (r as { fileUrl?: string }).fileUrl;
-      await load();
-      if (fileUrl) window.open(fileUrl, "_blank");
-    } catch (ex) {
-      window.alert((ex as Error).message);
-    }
+  function buyListing(id: number) {
+    void runBuy(async () => {
+      try {
+        const r = await api(`/api/shop/listings/${id}/buy`, { method: "POST", body: "{}" });
+        const fileUrl = (r as { fileUrl?: string }).fileUrl;
+        await load();
+        if (fileUrl) window.open(fileUrl, "_blank");
+      } catch (ex) {
+        window.alert((ex as Error).message);
+      }
+    });
   }
 
   return (
@@ -101,7 +106,7 @@ export function ShopPage() {
                 <input type="number" name="priceDuys" placeholder="Price in DUYS" min={0} step="0.0001" defaultValue={0} className="shop-price-input" />
                 <span className="shop-price-unit">DUYS</span>
               </div>
-              <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Creating…" : "Create listing"}</button>
+              <BusyButton type="submit" className="btn btn-primary" busy={creating} busyLabel="Creating…">Create listing</BusyButton>
             </div>
           </form>
         </div>
@@ -135,9 +140,9 @@ export function ShopPage() {
                       <span className="shop-owned-badge">Owned</span>
                     </>
                   ) : (
-                    <button className="btn btn-sm btn-primary shop-buy-btn" onClick={() => void buyListing(item.id)}>
+                    <BusyButton className="btn btn-sm btn-primary shop-buy-btn" busy={buying} busyLabel="Buying…" onClick={() => buyListing(item.id)}>
                       {item.priceDuys > 0 ? `Buy · ${Number(item.priceDuys).toFixed(4)} DUYS` : "Get Free"}
-                    </button>
+                    </BusyButton>
                   )}
                 </div>
                 {!item.active && isSelf && <div className="shop-inactive-label">Inactive</div>}

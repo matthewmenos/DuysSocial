@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../auth";
 import { Icon } from "../../components/Icon";
+import { BusyButton } from "../../components/BusyButton";
+import { useBusy } from "../../components/useBusy";
 
 type View = { id: number; reward: number; createdAt: string };
 type Wallet = {
@@ -17,7 +19,7 @@ export function EarnPage() {
   const [views, setViews] = useState<View[]>([]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [reward, setReward] = useState(10);
-  const [busy, setBusy] = useState(false);
+  const { busy, run } = useBusy();
 
   const load = () => {
     api("/api/earn").then((d) => { setViews(d.views || []); setReward(d.reward ?? 10); }).catch(() => {});
@@ -33,15 +35,14 @@ export function EarnPage() {
   const claimableTokens = Math.floor(points / rules.pointsPerToken);
   const progress = Math.min(100, Math.round((points / rules.minPoints) * 100));
 
-  async function watchAd() {
-    setBusy(true);
-    try {
-      await api("/api/earn/ad", { method: "POST", body: "{}" });
-      await refresh();
-      load();
-    } catch { /* ignore */ } finally {
-      setBusy(false);
-    }
+  function watchAd() {
+    void run(async () => {
+      try {
+        await api("/api/earn/ad", { method: "POST", body: "{}" });
+        await refresh();
+        load();
+      } catch { /* ignore */ }
+    });
   }
 
   return (
@@ -63,9 +64,9 @@ export function EarnPage() {
       <div className="card earn-ad">
         <h3>Watch an ad, earn {reward} $DUYS</h3>
         <p className="muted">Watch a short ad to claim your reward.</p>
-        <button className="btn btn-primary btn-lg" onClick={watchAd} disabled={busy}>
-          <Icon name="gift" size={20} /> {busy ? "Loading…" : "Watch ad & earn"}
-        </button>
+        <BusyButton className="btn btn-primary btn-lg" busy={busy} busyLabel="Loading…" onClick={watchAd}>
+          <Icon name="gift" size={20} /> Watch ad & earn
+        </BusyButton>
       </div>
 
       <div className="card earn-claim-card">

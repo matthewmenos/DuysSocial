@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../auth";
 import { Icon } from "../../components/Icon";
+import { BusyButton } from "../../components/BusyButton";
+import { useBusy } from "../../components/useBusy";
 import { PageError, PageLoading } from "../../components/PageState";
 import { socket } from "../../socket";
 
@@ -15,6 +17,7 @@ export function LiveRoomPage() {
   const [chat, setChat] = useState("");
   const [msgs, setMsgs] = useState<any[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { busy: ending, run: runEnd } = useBusy();
   const host = room?.room?.hostId === boot?.user?.id;
 
   const load = () => api(`/api/live/${id}`)
@@ -96,7 +99,7 @@ export function LiveRoomPage() {
           }}>💎</button>}
           <button className="lr-btn lr-btn-heart" onClick={() => api(`/api/live/${id}/react`, { method: "POST", body: JSON.stringify({ emoji: "❤️" }) })}>❤️</button>
           {host
-            ? <button className="lr-btn lr-btn-end" onClick={async () => { await api(`/api/live/${id}/end`, { method: "POST", body: "{}" }); nav("/live"); }}>■</button>
+            ? <BusyButton className="lr-btn lr-btn-end" busy={ending} busyLabel="■" onClick={() => void runEnd(async () => { await api(`/api/live/${id}/end`, { method: "POST", body: "{}" }); nav("/live"); })}>■</BusyButton>
             : <button className="lr-btn lr-btn-leave" onClick={() => nav("/live")}><Icon name="close" size={20} /></button>}
         </footer>
       </div>

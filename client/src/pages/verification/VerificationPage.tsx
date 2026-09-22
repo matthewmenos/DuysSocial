@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../../api";
 import { Badge, Icon } from "../../components/Icon";
+import { BusyButton } from "../../components/BusyButton";
+import { useBusy } from "../../components/useBusy";
 import { PageLoading } from "../../components/PageState";
 
 type Verif = {
@@ -45,7 +47,8 @@ export function VerificationPage() {
   const [selfie, setSelfie] = useState<File | null>(null);
   const [nationality, setNationality] = useState("");
   const [idType, setIdType] = useState("passport");
-  const [busy, setBusy] = useState(false);
+  const { busy, run: runIdentity } = useBusy();
+  const { busy: applying, run: runApply } = useBusy();
   const [err, setErr] = useState("");
 
   const load = () => {
@@ -58,7 +61,7 @@ export function VerificationPage() {
   const afford = (fee: number) => (data?.tokens ?? 0) >= fee;
   const pointsPrice = (fee: number) => Math.round(fee * 1000);
 
-  async function applyBadge(badge: string) {
+  function applyBadge(badge: string) {
     setErr("");
     if (locked) {
       setWizard(true);
@@ -69,42 +72,43 @@ export function VerificationPage() {
       setErr("Insufficient $DUYS balance for that badge.");
       return;
     }
-    try {
-      await api("/api/verification/apply", {
-        method: "POST",
-        body: JSON.stringify({ badge, paymentMethod: "tokens" }),
-      });
-      load();
-    } catch (ex) {
-      setErr((ex as Error).message);
-    }
+    void runApply(async () => {
+      try {
+        await api("/api/verification/apply", {
+          method: "POST",
+          body: JSON.stringify({ badge, paymentMethod: "tokens" }),
+        });
+        load();
+      } catch (ex) {
+        setErr((ex as Error).message);
+      }
+    });
   }
 
-  async function submitIdentity(e: FormEvent<HTMLFormElement>) {
+  function submitIdentity(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!idFile || !selfie) {
       setErr("Attach your ID photo and a clear selfie.");
       return;
     }
-    setBusy(true);
     setErr("");
     const fd = new FormData();
     fd.append("idPhoto", idFile);
     fd.append("selfie", selfie);
     fd.append("nationality", nationality);
     fd.append("idType", idType);
-    try {
-      await api("/api/verification/face", { method: "POST", body: fd });
-      setWizard(false);
-      setStep(0);
-      setIdFile(null);
-      setSelfie(null);
-      load();
-    } catch (ex) {
-      setErr((ex as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    void runIdentity(async () => {
+      try {
+        await api("/api/verification/face", { method: "POST", body: fd });
+        setWizard(false);
+        setStep(0);
+        setIdFile(null);
+        setSelfie(null);
+        load();
+      } catch (ex) {
+        setErr((ex as Error).message);
+      }
+    });
   }
 
   if (!data) return <PageLoading label="Loading verification…" />;
@@ -192,13 +196,15 @@ export function VerificationPage() {
                     <li key={ben}><Icon name="verify" size={13} /> {ben}</li>
                   ))}
                 </ul>
-                <button
+                <BusyButton
                   className="vbadge-select-btn"
+                  busy={applying}
+                  busyLabel="Applying…"
                   title={isLocked ? "Complete identity verification first" : `Apply for ${fee} DUYS`}
                   onClick={() => applyBadge(b.key)}
                 >
                   {isLocked ? "🔒 Verify Identity First" : afford(fee) ? `Apply · ${fee} DUYS` : "Insufficient Balance"}
-                </button>
+                </BusyButton>
               </div>
             );
           })}
@@ -274,7 +280,7 @@ export function VerificationPage() {
                 </label>
                 <div className="verif-wiz-actions">
                   <button type="button" className="btn" onClick={() => setStep(0)}>Back</button>
-                  <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? "Submitting…" : "Submit for review"}</button>
+                  <BusyButton className="btn btn-primary" type="submit" busy={busy} busyLabel="Submitting…">Submit for review</BusyButton>
                 </div>
               </form>
             </div>

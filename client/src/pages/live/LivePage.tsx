@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../api";
 import { Avatar, Icon } from "../../components/Icon";
+import { BusyButton } from "../../components/BusyButton";
+import { useBusy } from "../../components/useBusy";
 
 export function LivePage() {
   const nav = useNavigate();
   const [rooms, setRooms] = useState<any[]>([]);
+  const { busy: startingVideo, run: runVideo } = useBusy();
+  const { busy: startingSpace, run: runSpace } = useBusy();
   useEffect(() => { api("/api/live").then((d) => setRooms(d.rooms || [])); }, []);
   const lives = rooms.filter((r) => r.kind !== "space");
   const spaces = rooms.filter((r) => r.kind === "space");
@@ -13,14 +17,14 @@ export function LivePage() {
     <>
       <div className="page-head glass-bar"><h1>Live & Spaces</h1></div>
       <div className="live-cta">
-        <button className="btn btn-primary" onClick={async () => {
+        <BusyButton className="btn btn-primary" busy={startingVideo} busyLabel="Starting…" onClick={() => void runVideo(async () => {
           const d = await api("/api/live/start", { method: "POST", body: JSON.stringify({ kind: "video", title: "Live" }) });
           nav(`/live/${d.room.id}`);
-        }}><Icon name="video" size={18} /> Go Live</button>
-        <button className="btn" onClick={async () => {
+        })}><Icon name="video" size={18} /> Go Live</BusyButton>
+        <BusyButton className="btn" busy={startingSpace} busyLabel="Starting…" onClick={() => void runSpace(async () => {
           const d = await api("/api/live/start", { method: "POST", body: JSON.stringify({ kind: "space", title: "Space" }) });
           nav(`/live/${d.room.id}`);
-        }}><Icon name="broadcast" size={18} /> Host a Space</button>
+        })}><Icon name="broadcast" size={18} /> Host a Space</BusyButton>
       </div>
       <h3 className="section-title"><Icon name="video" size={18} /> Live now</h3>
       <div className="live-grid">
