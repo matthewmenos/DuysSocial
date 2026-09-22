@@ -789,3 +789,286 @@
 
 .earn-claim-card { position: relative; }
 
+
+.wlt-claim-password {
+  margin: 16px 0;
+}
+.wlt-claim-password .pw-wrap {
+  margin-bottom: 12px;
+}
+.wlt-claim-password .btn-primary {
+  width: 100%;
+}
+
+/* ══════════════════════════════════════════
+   Earnings card
+   ══════════════════════════════════════════ */
+.wlt-earn-card {
+  margin-top: 16px;
+}
+.wlt-earn-balance {
+  display: flex; align-items: center; gap: 6px;
+  margin: 12px 0;
+}
+.wlt-earn-amt {
+  font-size: 42px; font-weight: 800;
+}
+.wlt-earn-unit {
+  font-size: 18px; color: var(--text-muted);
+}
+.wlt-earn-pills {
+  display: flex; gap: 16px; margin-bottom: 16px;
+}
+.wlt-earn-pill {
+  font-size: 13px; color: var(--text-muted);
+}
+.wlt-earn-pill strong { color: var(--text); }
+.wlt-earn-progress-block { margin-top: 12px; }
+.wlt-earn-bar {
+  height: 8px; border-radius: 999px;
+  background: var(--bg-hover); overflow: hidden;
+}
+.wlt-earn-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--blue), #6366f1);
+}
+.wlt-earn-meta { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+.wlt-cta-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; border-radius: 14px;
+  text-decoration: none; margin-top: 12px;
+  border: 1px solid var(--border);
+  transition: background 0.15s, border-color 0.15s;
+}
+.wlt-cta-btn:hover { background: var(--bg-hover); }
+.wlt-cta-mine {
+  border-color: var(--blue);
+  background: linear-gradient(135deg, var(--blue), #0d8fed);
+  color: #fff;
+}
+.wlt-cta-campaign {
+  border-color: var(--border);
+  background: var(--bg-elevated, var(--bg));
+}
+.wlt-cta-icon { flex-shrink: 0; }
+.wlt-cta-text { flex: 1; display: flex; flex-direction: column; }
+.wlt-cta-text strong { font-size: 14px; font-weight: 700; }
+.wlt-cta-text span { font-size: 12px; color: var(--text-muted); }
+.wlt-cta-arrow { flex-shrink: 0; }
+
+/* ══════════════════════════════════════════
+   Token metrics card
+   ══════════════════════════════════════════ */
+.wlt-metrics-card {
+  margin-top: 16px;
+}
+.wlt-metrics-price-row {
+  font-size: 13px; color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.wlt-price-row {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 4px;
+}
+.wlt-price-amt {
+  font-size: 32px; font-weight: 800;
+}
+.wlt-price-pair {
+  font-size: 13px; color: var(--text-muted);
+}
+.wlt-price-change-row {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 16px;
+}
+.wlt-price-change {
+  font-size: 15px; font-weight: 700;
+}
+.wlt-price-change.positive { color: var(--success, #00ba7c); }
+.wlt-price-change.negative { color: var(--danger, #f4212e); }
+.wlt-price-period {
+  font-size: 13px; color: var(--text-muted);
+}
+.wlt-metrics-footer {
+  display: flex; gap: 24px; margin-top: 12px;
+}
+.wlt-metrics-item {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.wlt-metrics-label {
+  font-size: 12px; color: var(--text-muted);
+}
+.wlt-metrics-val {
+  font-size: 16px; font-weight: 700;
+}
+.wlt-metrics-unit {
+  font-size: 13px; color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════════
+   Invite / referral row
+   ══════════════════════════════════════════ */
+.wlt-invite-row {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+.wlt-invite-label {
+  font-size: 14px;
+}
+.wlt-invite-right {
+  display: flex; align-items: center; gap: 8px;
+}
+.wlt-referral-count {
+  font-size: 13px; color: var(--text-muted);
+}
+.wlt-copy-invite {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); padding: 4px;
+  display: flex; align-items: center; justify-content: center;
+}
+.wlt-copy-invite:hover { color: var(--blue); }
+
+/* ══════════════════════════════════════════
+   Claim card
+   ══════════════════════════════════════════ */
+.wlt-section-label {
+  font-size: 13px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.wlt-section-pad {
+  padding: 16px 16px 0;
+}
+.claim-card {
+  margin-top: 16px;
+}
+.wlt-claim-summary {
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 12px;
+  margin: 16px 0;
+}
+.wlt-claim-col {
+  display: flex; flex-direction: column; align-items: center;
+}
+.wlt-claim-big {
+  font-size: 32px; font-weight: 800;
+}
+.wlt-claim-teal { color: var(--success, #00ba7c); }
+.wlt-claim-sub {
+  font-size: 13px; color: var(--text-muted);
+}
+.wlt-claim-arrow {
+  font-size: 20px; color: var(--text-muted);
+}
+.wlt-claim-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 12px 16px;
+  border-radius: 999px; border: none;
+  background: var(--blue); color: #fff;
+  font-weight: 700; font-size: 14px;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.wlt-claim-btn:hover:not(:disabled) { opacity: 0.9; }
+.wlt-claim-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.wlt-claim-result {
+  margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+}
+.wlt-claim-result-ok {
+  background: rgba(0, 186, 124, 0.08);
+  border: 1px solid rgba(0, 186, 124, 0.2);
+}
+.wlt-claim-result-err {
+  background: rgba(244, 33, 46, 0.08);
+  border: 1px solid rgba(244, 33, 46, 0.2);
+}
+
+/* ══════════════════════════════════════════
+   Claim history
+   ══════════════════════════════════════════ */
+.wlt-tx-card {
+  padding: 4px 0;
+}
+.wlt-tx-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.wlt-tx-row:last-child { border-bottom: none; }
+.wlt-tx-icon {
+  width: 32px; height: 32px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.wlt-tx-icon-in { background: var(--wlt-blue-dim, rgba(13,143,237,0.15)); color: var(--wlt-blue, #0d8fed); }
+.wlt-tx-icon-out { background: rgba(244,33,46,0.08); color: var(--danger, #f4212e); }
+.wlt-tx-icon-claim { background: rgba(0,186,124,0.08); color: var(--success, #00ba7c); }
+.wlt-tx-info { flex: 1; min-width: 0; }
+.wlt-tx-label {
+  font-size: 14px; font-weight: 600;
+  display: block; color: var(--text);
+}
+.wlt-tx-sub {
+  font-size: 12px; color: var(--text-muted);
+  display: block; margin-top: 2px;
+}
+.wlt-tx-hash {
+  font-size: 12px; color: var(--blue);
+  display: block; margin-top: 2px;
+}
+.wlt-tx-pending {
+  font-size: 12px; color: var(--text-muted);
+  display: block; margin-top: 2px;
+}
+.wlt-tx-failed {
+  font-size: 12px; color: var(--danger, #f4212e);
+  display: block; margin-top: 2px;
+}
+.wlt-tx-amount {
+  font-size: 14px; font-weight: 700; flex-shrink: 0;
+}
+.wlt-tx-amount.pos { color: var(--success, #00ba7c); }
+.wlt-tx-amount.neg { color: var(--danger, #f4212e); }
+.wlt-tx-right {
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: 2px; flex-shrink: 0;
+}
+.wlt-badge {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 999px; font-size: 11px; font-weight: 700;
+}
+.wlt-badge-confirmed { background: rgba(0,186,124,0.12); color: var(--success, #00ba7c); }
+.wlt-badge-pending { background: rgba(245,185,10,0.12); color: #f5b50a; }
+.wlt-badge-failed { background: rgba(244,33,46,0.12); color: var(--danger, #f4212e); }
+.wlt-tx-time {
+  font-size: 11px; color: var(--text-muted);
+}
+.wlt-empty {
+  text-align: center; padding: 24px;
+  color: var(--text-muted); font-size: 14px;
+}
+
+/* Balance USD + on-chain */
+.wlt-balance-usd {
+  font-size: 13px; color: var(--text-muted);
+  margin-top: 4px;
+}
+.wlt-onchain-row {
+  display: flex; justify-content: space-between;
+  align-items: center; padding: 10px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+}
+.wlt-onchain-amt {
+  font-size: 14px; font-weight: 700;
+}
+
+/* Badges */
+.wlt-badge-earn {
+  background: rgba(0,186,124,0.12); color: var(--success, #00ba7c);
+}
+.wlt-badge-metrics {
+  background: rgba(29,155,246,0.12); color: var(--blue, #1d9bf6);
+}

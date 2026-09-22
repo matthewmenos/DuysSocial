@@ -1,4 +1,4 @@
-const PATHS: Record<string, string> = {
+﻿const PATHS: Record<string, string> = {
   home: '<path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
   explore: '<circle cx="12" cy="12" r="9"/><path d="m15 9-2 4-4 2 2-4z"/>',
@@ -8,6 +8,8 @@ const PATHS: Record<string, string> = {
   wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16" cy="14" r="1.4"/>',
   coins: '<circle cx="9" cy="9" r="6"/><path d="M16.5 8.5a6 6 0 1 1-5 10"/>',
   gift: '<rect x="3" y="9" width="18" height="12" rx="1"/><path d="M3 13h18M12 9v12"/>',
+  checkmark: '<path d="M5 13l4 4L19 7"/>',
+  paperclip: '<path d="M14.59 14.59A2 2 0 0 0 15.91 13.2L9.5 6.8a1 1 0 0 1 .34-.34l.34-.34A1 1 0 0 1 10 7h7a3 3 0 0 1 0 6h-1M6 13h7M6 9h7M4 17h7"/>',
   verify: '<path d="m9 12 2 2 4-4"/><path d="M12 2 14.5 4.5 18 4l-.5 3.5L21 9l-2 3 2 3-3.5 1.5L18 20l-3.5-.5L12 22l-2.5-2.5L6 20l.5-3.5L3 15l2-3-2-3 3.5-1.5L6 4l3.5.5z"/>',
   boost: '<polyline points="22 7 13.5 15.5 8.5 10.5 1 18"/><polyline points="16 7 22 7 22 13"/>',
   admin: '<path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6Z"/>',
