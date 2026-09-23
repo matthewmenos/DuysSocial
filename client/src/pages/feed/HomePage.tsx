@@ -42,7 +42,7 @@ export function HomePage() {
     setNewPosts(0);
     load();
   }, []);
-  if (!boot?.user) return null; // AppShell redirects; never render the feed loader
+  if (!boot?.user) return <PageLoading rows={0} />; // AppShell redirects to login; show placeholder while the redirect takes effect
   if (!data) return <PageLoading label="Loading your feed…" />;
   const user = boot.user;
   return (

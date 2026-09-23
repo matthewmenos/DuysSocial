@@ -35,8 +35,8 @@ export function ShopPage() {
   if (loadErr) return <PageError message={loadErr} onRetry={() => void load()} />;
   if (!data) return <PageLoading label="Loading shop…" />;
   if (!boot?.user) return <PageLoading />;
-  const isSelf = data.seller?.username === boot.user.username;
-  const canSell = isSelf && Boolean(boot.user.verifiedBadge);
+  const isSelf = data.seller?.username === boot.user?.username;
+  const canSell = isSelf && Boolean(boot.user?.verifiedBadge);
   const fmt = (p: number) => (p > 0 ? `${Number(p).toFixed(4)} DUYS` : "Free");
 
   function createListing(e: FormEvent<HTMLFormElement>) {
