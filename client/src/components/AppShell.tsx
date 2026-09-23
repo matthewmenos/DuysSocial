@@ -26,7 +26,7 @@ export function AppShell() {
     if (!loading && boot && !boot.user && !isPublicRoute(loc.pathname)) {
       nav("/auth/login", { replace: true });
     }
-  }, [boot, loading, loc.pathname, nav]);
+  }, [boot?.user, loading, loc.pathname, nav]);
   const [composer, setComposer] = useState(false);
   const [tray, setTray] = useState(false);
   const [notifs, setNotifs] = useState<{ id: number; text: string; isRead: boolean }[]>([]);
@@ -43,9 +43,12 @@ export function AppShell() {
   }
   const me = user;
 
+  // presence ping — guard with optional chaining so the effect is safe when
+  // user is still undefined on the initial render.
   useEffect(() => {
-    socket.emit("presence", user.id);
-  }, [user.id]);
+    socket.emit("presence", user?.id);
+    return () => { socket.emit("presence", null); };
+  }, [user?.id]);
 
   const active = (name: string) => loc.pathname === name || loc.pathname.startsWith(name + "/");
 

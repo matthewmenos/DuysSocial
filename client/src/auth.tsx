@@ -41,18 +41,39 @@ const Ctx = createContext<AuthContext>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [boot, setBoot] = useState<Boot | null>(null);
   const [loading, setLoading] = useState(true);
+  const getTheme = (): string => {
+    try { return localStorage.getItem("duys-theme") ?? "dark"; } catch { return "dark"; }
+  };
   const refresh = async () => {
-    const data = await api("/api/bootstrap");
-    setBoot(data);
-    const theme = data.user?.theme || localStorage.getItem("duys-theme") || "dark";
-    document.documentElement.setAttribute("data-theme", theme);
+    try {
+      const data = await api("/api/bootstrap");
+      setBoot(data);
+      const theme = data.user?.theme || getTheme();
+      document.documentElement.setAttribute("data-theme", theme);
+    } catch (ex) {
+      // Bootstrap failed — set boot to a fallback with user=null so AppShell's
+      // redirect-to-login logic runs instead of hanging on PageLoading forever.
+      const error = ex as Error & { data?: { appName?: string } };
+      setBoot({
+        appName: error.data?.appName || "DUYS",
+        user: null,
+        unreadNotifications: 0,
+        unreadMessages: 0,
+        announcementEnabled: false,
+        announcementText: "",
+        googleEnabled: false,
+        vapidPublic: "",
+        postCharLimit: 1000,
+      });
+      document.documentElement.setAttribute("data-theme", getTheme());
+    }
   };
   useEffect(() => {
-    refresh().catch(() => {}).finally(() => setLoading(false));
+    refresh().finally(() => setLoading(false));
   }, []);
   const setTheme = (t: string) => {
+    try { localStorage.setItem("duys-theme", t); } catch { /* ignore */ }
     document.documentElement.setAttribute("data-theme", t);
-    localStorage.setItem("duys-theme", t);
     setBoot((b) => (b ? { ...b, user: b.user ? { ...b.user, theme: t } : null } : b));
   };
   return <Ctx.Provider value={{ boot, loading, refresh, setTheme }}>{children}</Ctx.Provider>;
