@@ -73,7 +73,7 @@ Open http://localhost:5173 — sign up, or use the admin account from `.env`.
 
 ## Never-blank-page invariants
 
-These three rules exist because each one, when broken, produced a fully blank screen in
+These four rules exist because each one, when broken, produced a fully blank screen in
 production. Please keep them when adding pages or changing the shell.
 
 1. **Auth bootstrapping is a three-state machine.** `AuthProvider` (`client/src/auth.tsx`) exposes
@@ -92,13 +92,21 @@ production. Please keep them when adding pages or changing the shell.
    `SkeletonList` (avatar + two lines) are exported for content-shaped placeholders — use them
    instead of letting an empty list flash its "nothing here yet" state before the fetch lands
    (see `MessagesPage`, which gates its empty state on a `listLoaded` flag).
-   Guards that run before the data fetch (e.g. a session check) must `return null` rather than a
-   spinner when the shell's own redirect is already moving the user along — see `HomePage`.
+   Guards that run before the data fetch (e.g. a session check) should still render *something* —
+   pass `rows={0}` to `PageLoading` when the shell's own redirect is already moving the user along.
+   That avoids both the double-skeleton flash and the blank frame (see `HomePage`); the earlier
+   `return null` here is what made the root domain look empty.
 3. **The service worker only ever touches navigations.** `client/public/sw.js` answers
    `mode === "navigate"` requests network-first and falls back to the precached `/offline.html`.
    It must never synthesise responses for JS/CSS chunks — returning a plain-text body for a script
    makes the browser parse `"Offline"` as JavaScript, throw a syntax error and render a blank page.
    `/api`, `/media` and `/socket.io` are always passed through untouched.
+4. **Every hook runs before the first early return.** React matches hooks by call order, so a hook
+   written below a guard (`if (!boot) return <PageLoading />;`) runs on some renders and not others.
+   On a reload, `AppShell` registered one `useEffect` while the session was loading and two once it
+   arrived, so React threw *"Rendered more hooks than during the previous render"* — caught by the
+   `ErrorBoundary` in `main.tsx` and painted as "Something went wrong" on every signed-in refresh.
+   Keep hooks at the top and guards below them.
 
 Related cache rule (`server/src/index.ts`): `index.html` and `sw.js` are sent with
 `no-cache, must-revalidate`, while hashed Vite assets are `immutable`. A cached `index.html` keeps

@@ -18,20 +18,34 @@ export function AppShell() {
   const { boot, refresh, loading, setTheme } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
-
-  // Anonymous users must leave protected routes immediately. Boot is null only
-  // on the very first load, so the redirect fires as soon as the session check
-  // resolves (replace:true keeps / off the back-button stack).
-  useEffect(() => {
-    if (!loading && boot && !boot.user && !isPublicRoute(loc.pathname)) {
-      nav("/auth/login", { replace: true });
-    }
-  }, [boot?.user, loading, loc.pathname, nav]);
   const [composer, setComposer] = useState(false);
   const [tray, setTray] = useState(false);
   const [notifs, setNotifs] = useState<{ id: number; text: string; isRead: boolean }[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const user = boot?.user;
+  // `boot` is null only until the first session check resolves. Deriving a
+  // boolean keeps the redirect effect from re-running on every refresh()
+  // (refresh() replaces the boot object, so `boot` itself is not a stable dep).
+  const resolved = !loading && boot != null;
+
+  // ── Hooks must run on EVERY render, before any early return. ──────────────
+  // Declaring a useEffect below the guards made the hook count differ between
+  // the "starting up" render (1 effect) and the signed-in render (2 effects),
+  // which React reports as "Rendered more hooks than during the previous
+  // render" — caught by the ErrorBoundary and shown as "Something went wrong"
+  // on every reload. Keep them up here.
+  useEffect(() => {
+    socket.emit("presence", user?.id ?? null);
+    return () => { socket.emit("presence", null); };
+  }, [user?.id]);
+
+  // Anonymous users must leave protected routes immediately (replace:true keeps
+  // the dead route off the back-button stack).
+  useEffect(() => {
+    if (resolved && !user && !isPublicRoute(loc.pathname)) {
+      nav("/auth/login", { replace: true });
+    }
+  }, [resolved, user, loc.pathname, nav]);
 
   if (!boot || loading) return <PageLoading label="Starting DUYS…" />;
   // Protected pages render a placeholder while the redirect above takes
@@ -42,13 +56,6 @@ export function AppShell() {
       : <PageLoading label="Redirecting to login…" rows={0} />;
   }
   const me = user;
-
-  // presence ping — guard with optional chaining so the effect is safe when
-  // user is still undefined on the initial render.
-  useEffect(() => {
-    socket.emit("presence", user?.id);
-    return () => { socket.emit("presence", null); };
-  }, [user?.id]);
 
   const active = (name: string) => loc.pathname === name || loc.pathname.startsWith(name + "/");
 
